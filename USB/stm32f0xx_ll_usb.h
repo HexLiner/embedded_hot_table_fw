@@ -166,10 +166,6 @@ typedef struct
 
 #define EP_ADDR_MSK                            0x7U
 
-#ifndef USE_USB_DOUBLE_BUFFER
-#define USE_USB_DOUBLE_BUFFER                  1U
-#endif /* USE_USB_DOUBLE_BUFFER */
-
 
 /**
   * @}

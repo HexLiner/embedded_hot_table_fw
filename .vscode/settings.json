@@ -5,5 +5,6 @@
         "twi_driver.h": "c",
         "stdint.h": "c",
         "cstdint": "cpp"
-    }
+    },
+    "C_Cpp.dimInactiveRegions": false
 }

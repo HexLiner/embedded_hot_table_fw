@@ -4,7 +4,9 @@
         "sysclk.h": "c",
         "twi_driver.h": "c",
         "stdint.h": "c",
-        "cstdint": "cpp"
+        "cstdint": "cpp",
+        "gpio.h": "c",
+        "stdbool.h": "c"
     },
     "C_Cpp.dimInactiveRegions": false
 }

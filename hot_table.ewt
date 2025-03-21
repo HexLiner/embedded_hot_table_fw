@@ -5842,16 +5842,16 @@
             <name>$PROJ_DIR$\USB\stm32f0xx_ll_usb.h</name>
         </file>
         <file>
+            <name>$PROJ_DIR$\USB\usb_cdc.c</name>
+        </file>
+        <file>
+            <name>$PROJ_DIR$\USB\usb_cdc.h</name>
+        </file>
+        <file>
             <name>$PROJ_DIR$\USB\usbd_cdc.c</name>
         </file>
         <file>
             <name>$PROJ_DIR$\USB\usbd_cdc.h</name>
-        </file>
-        <file>
-            <name>$PROJ_DIR$\USB\usbd_cdc_if_template.c</name>
-        </file>
-        <file>
-            <name>$PROJ_DIR$\USB\usbd_cdc_if_template.h</name>
         </file>
         <file>
             <name>$PROJ_DIR$\USB\usbd_conf.c</name>

@@ -7,19 +7,7 @@
 #include "mcu_clock.h"
 #include "hal/i2c/i2c_driver.h"
 ////#include "ssd1306.h"
-
-
-#include "usbd_core.h"
-#include "stm32f0xx_hal_pcd.h"
-#include "usbd_desc.h"
-#include "usbd_cdc.h"
-#include "usbd_cdc_if_template.h"
-
-
-USBD_HandleTypeDef USBD_Device;
-
-extern PCD_HandleTypeDef hpcd;
-
+#include "usb_cdc.h"
 
 
 #define SSD1306_SLAVE_ADDR (0b01111000)  // or 0b01111010  - 0 1 1 1 1 0 SA0 R/W# 
@@ -34,28 +22,21 @@ i2c_settings_t i2c_settings = {
 
 
 int main (void) {
-
     mcu_clock_set_normal_config();
     sysclk_enable_peripheral(GPIOA);
     sysclk_enable_peripheral(GPIOB);
-    sysclk_enable_peripheral(SYSCFG);
-    SYSCFG->CFGR1 |= 1 << SYSCFG_CFGR1_PA11_PA12_RMP_Pos;
+    
+    usb_cdc_init();
     delay_ms(2000);
 
 
 
-    USBD_Init(&USBD_Device, &VCP_Desc, 0);
-
-    // Add Supported Class
-    USBD_RegisterClass(&USBD_Device, &USBD_CDC);
-
-    // Add CDC Interface Clas
-    USBD_CDC_RegisterInterface(&USBD_Device, &USBD_CDC_Template_fops);
-
-    // Start Device Process
-    USBD_Start(&USBD_Device);
+    uint8_t *data = "Hallo USB!\r\n";
     
-    while (1);
+    while (1) {
+        usb_cdc_send_data(data, 13);
+        delay_ms(2000);
+    }
 
 
 
@@ -135,11 +116,4 @@ int main (void) {
         }
     }*/
 
-}
-
-
-void USB_IRQHandler(void);
-void USB_IRQHandler(void)
-{
-  HAL_PCD_IRQHandler(&hpcd);
 }

@@ -259,6 +259,7 @@ typedef uint32_t gpio_pin_t;
 
 extern void gpio_config_pins(gpio_pin_t pins, gpio_mode_t mode, gpio_pull_t pull, gpio_speed_t speed, uint32_t alt_func, bool output_state);
 extern peripheral_t gpio_get_peripheral(gpio_pin_t pin);
+extern uint8_t gpio_get_pin_n(gpio_pin_t pin);
 
 extern void gpio_set_pins(gpio_pin_t pins);
 extern void gpio_reset_pins(gpio_pin_t pins);

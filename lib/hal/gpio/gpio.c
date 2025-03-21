@@ -32,13 +32,7 @@ void gpio_config_pins(gpio_pin_t pins, gpio_mode_t mode, gpio_pull_t pull, gpio_
     // Check port is valid
     port = gpio_get_peripheral(pins);
     if (port == NULL) ERROR_FATAL(gpio_config_pins, __LINE__);
-    pins = pins & PINS_MASK;
-    pin = 0;
-    pins = pins >> 1;
-    while (pins != 0) {
-        pins = pins >> 1;
-        pin++;
-    }
+    pin = gpio_get_pin_n(pins);
     pin_reg_pos = pin * 2;
 
 
@@ -74,7 +68,7 @@ void gpio_config_pins(gpio_pin_t pins, gpio_mode_t mode, gpio_pull_t pull, gpio_
     ((GPIO_TypeDef*)port)->OSPEEDR &= ~(0x03 << pin_reg_pos);
     ((GPIO_TypeDef*)port)->OSPEEDR |= (ospeedr_ospeed << pin_reg_pos);
     ((GPIO_TypeDef*)port)->AFR[pin >> 3] &= ~(4 << (pin & 0x7));
-    ((GPIO_TypeDef*)port)->AFR[pin >> 3] |= (alt_func << (pin & 0x7));
+    ((GPIO_TypeDef*)port)->AFR[pin >> 3] |= (alt_func << ((pin & 0x7) * 4));
     ((GPIO_TypeDef*)port)->PUPDR   &= ~(0x03 << pin_reg_pos);
     ((GPIO_TypeDef*)port)->PUPDR   |= (pupdr_pupd << pin_reg_pos);
     ((GPIO_TypeDef*)port)->OTYPER  |= (otyper_otype << pin);
@@ -179,4 +173,16 @@ peripheral_t gpio_get_peripheral(gpio_pin_t pin) {
     #endif
 
     return NULL;
+}
+
+
+uint8_t gpio_get_pin_n(gpio_pin_t pin) {
+    pin = pin & PINS_MASK;
+    uint8_t pin_n = 0;
+    pin = pin >> 1;
+    while (pin != 0) {
+        pin = pin >> 1;
+        pin_n++;
+    }
+    return pin_n;
 }

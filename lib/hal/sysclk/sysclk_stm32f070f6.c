@@ -25,7 +25,7 @@ typedef struct {
 static sysclk_internal_t sysclk_internal;
 
 
-static void sysclk_get_peripheral_enr(const peripheral_t peripheral, uint32_t **reg, uint32_t *pos);
+static void sysclk_get_peripheral_enr(const peripheral_t peripheral, volatile uint32_t **reg, uint32_t *pos);
 static uint32_t sysclk_get_common_bus_freq(sysclk_bus_t bus);
 static uint32_t sysclk_get_sysclk_bus_freq(sysclk_bus_t bus);
 static uint32_t sysclk_get_pll_bus_freq(sysclk_bus_t bus);
@@ -54,10 +54,10 @@ void sysclk_init(const sysclk_extcfg_t *ext_cfg) {
 }
 
 
-static void sysclk_get_peripheral_enr(const peripheral_t peripheral, uint32_t **reg, uint32_t *pos) {
+static void sysclk_get_peripheral_enr(const peripheral_t peripheral, volatile uint32_t **reg, uint32_t *pos) {
     *pos = UINT32_MAX;
 
-    **reg = RCC->AHBENR;
+    *reg = &(RCC->AHBENR);
     switch ((uintptr_t)peripheral) {
         case (uintptr_t)GPIOF:         *pos = RCC_AHBENR_GPIOFEN;  return;
         case (uintptr_t)GPIOD:         *pos = RCC_AHBENR_GPIODEN;  return;
@@ -68,7 +68,7 @@ static void sysclk_get_peripheral_enr(const peripheral_t peripheral, uint32_t **
         case (uintptr_t)DMA1:          *pos = RCC_AHBENR_DMAEN;    return;
     }
 
-    **reg = RCC->APB2ENR;
+    *reg = &(RCC->APB2ENR);
     switch ((uintptr_t)peripheral) {
         case (uintptr_t)SYSCFG:        *pos = RCC_APB2ENR_SYSCFGEN;  return;
         case (uintptr_t)ADC:           *pos = RCC_APB2ENR_ADCEN;     return;
@@ -79,7 +79,7 @@ static void sysclk_get_peripheral_enr(const peripheral_t peripheral, uint32_t **
         case (uintptr_t)TIM17:         *pos = RCC_APB2ENR_TIM17EN;   return;
     }
 
-    **reg = RCC->APB1ENR;
+    *reg = &(RCC->APB1ENR);
     switch ((uintptr_t)peripheral) {
         case (uintptr_t)TIM3:          *pos = RCC_APB1ENR_TIM3EN;    return;
         case (uintptr_t)TIM14:         *pos = RCC_APB1ENR_TIM14EN;   return;
@@ -99,7 +99,7 @@ static void sysclk_get_peripheral_enr(const peripheral_t peripheral, uint32_t **
 /// @return     none
 //  ***************************************************************************
 void sysclk_enable_peripheral(const peripheral_t peripheral) {
-    uint32_t *reg;
+    volatile uint32_t *reg;
     uint32_t msk;
     sysclk_get_peripheral_enr(peripheral, &reg, &msk);
     *reg |= msk;
@@ -112,7 +112,7 @@ void sysclk_enable_peripheral(const peripheral_t peripheral) {
 /// @return     none
 //  ***************************************************************************
 void sysclk_disable_peripheral(const peripheral_t peripheral) {
-    uint32_t *reg;
+    volatile uint32_t *reg;
     uint32_t msk;
     sysclk_get_peripheral_enr(peripheral, &reg, &msk);
     *reg &= ~msk;
@@ -382,9 +382,9 @@ static uint32_t sysclk_get_pll_bus_freq(sysclk_bus_t bus) {
     if (!is_pll_en) return 0;
 
     // Get dividers
-    pll_prediv = RCC->CFGR2 & RCC_CFGR2_PREDIV;
+    pll_prediv = (RCC->CFGR2 & RCC_CFGR2_PREDIV) >> RCC_CFGR2_PREDIV_Pos;
     pll_prediv++;
-    pll_mul = RCC->CFGR & RCC_CFGR_PLLMUL;
+    pll_mul = (RCC->CFGR & RCC_CFGR_PLLMUL) >> RCC_CFGR_PLLMUL_Pos;
     pll_mul += 2;
 
     // PLL = (PLLSRC / PLL_PREDIV) * PLL_MUL

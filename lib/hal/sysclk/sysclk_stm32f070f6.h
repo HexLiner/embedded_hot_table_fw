@@ -13,8 +13,8 @@
 
 // sw
 #define SYSCLK_SRC_HSI         (0)
-#define SYSCLK_SRC_PLLCLK      (1)
-#define SYSCLK_SRC_HSE         (2)
+#define SYSCLK_SRC_HSE         (1)
+#define SYSCLK_SRC_PLLCLK      (2)
 
 // pll src
 #define PLL_SRC_HSI_DIV2       (0)
@@ -30,6 +30,10 @@
 // I2C 1 src
 #define I2C1_SRC_HSI          (0x00)
 #define I2C1_SRC_SYSCLK       (0x01)
+
+// USB src
+#define USB_SRC_NONE          (0x00)
+#define USB_SRC_PLLCLK        (0x01)
 
 
 #define SYSCLK_PART            (0x10)

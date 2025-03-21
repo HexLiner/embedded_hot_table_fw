@@ -348,6 +348,7 @@
                     <state>$PROJ_DIR$\src</state>
                     <state>$PROJ_DIR$\lib\</state>
                     <state>$PROJ_DIR$\lib\cmsis</state>
+                    <state>$PROJ_DIR$\USB\</state>
                 </option>
                 <option>
                     <name>CCStdIncCheck</name>
@@ -4394,6 +4395,15 @@
                 </file>
             </group>
             <group>
+                <name>i2c</name>
+                <file>
+                    <name>$PROJ_DIR$\lib\hal\i2c\i2c_driver.h</name>
+                </file>
+                <file>
+                    <name>$PROJ_DIR$\lib\hal\i2c\i2c_driver_soft.c</name>
+                </file>
+            </group>
+            <group>
                 <name>sysclk</name>
                 <file>
                     <name>$PROJ_DIR$\lib\hal\sysclk\sysclk.h</name>
@@ -4438,6 +4448,75 @@
         </file>
         <file>
             <name>$PROJ_DIR$\src\mcu_clock.h</name>
+        </file>
+    </group>
+    <group>
+        <name>USB</name>
+        <file>
+            <name>$PROJ_DIR$\USB\stm32f0xx_hal_def.h</name>
+        </file>
+        <file>
+            <name>$PROJ_DIR$\USB\stm32f0xx_hal_pcd.c</name>
+        </file>
+        <file>
+            <name>$PROJ_DIR$\USB\stm32f0xx_hal_pcd.h</name>
+        </file>
+        <file>
+            <name>$PROJ_DIR$\USB\stm32f0xx_hal_pcd_ex.c</name>
+        </file>
+        <file>
+            <name>$PROJ_DIR$\USB\stm32f0xx_hal_pcd_ex.h</name>
+        </file>
+        <file>
+            <name>$PROJ_DIR$\USB\stm32f0xx_ll_usb.c</name>
+        </file>
+        <file>
+            <name>$PROJ_DIR$\USB\stm32f0xx_ll_usb.h</name>
+        </file>
+        <file>
+            <name>$PROJ_DIR$\USB\usbd_cdc.c</name>
+        </file>
+        <file>
+            <name>$PROJ_DIR$\USB\usbd_cdc.h</name>
+        </file>
+        <file>
+            <name>$PROJ_DIR$\USB\usbd_cdc_if_template.c</name>
+        </file>
+        <file>
+            <name>$PROJ_DIR$\USB\usbd_cdc_if_template.h</name>
+        </file>
+        <file>
+            <name>$PROJ_DIR$\USB\usbd_conf.c</name>
+        </file>
+        <file>
+            <name>$PROJ_DIR$\USB\usbd_conf.h</name>
+        </file>
+        <file>
+            <name>$PROJ_DIR$\USB\usbd_core.c</name>
+        </file>
+        <file>
+            <name>$PROJ_DIR$\USB\usbd_core.h</name>
+        </file>
+        <file>
+            <name>$PROJ_DIR$\USB\usbd_ctlreq.c</name>
+        </file>
+        <file>
+            <name>$PROJ_DIR$\USB\usbd_ctlreq.h</name>
+        </file>
+        <file>
+            <name>$PROJ_DIR$\USB\usbd_def.h</name>
+        </file>
+        <file>
+            <name>$PROJ_DIR$\USB\usbd_desc.c</name>
+        </file>
+        <file>
+            <name>$PROJ_DIR$\USB\usbd_desc.h</name>
+        </file>
+        <file>
+            <name>$PROJ_DIR$\USB\usbd_ioreq.c</name>
+        </file>
+        <file>
+            <name>$PROJ_DIR$\USB\usbd_ioreq.h</name>
         </file>
     </group>
 </project>

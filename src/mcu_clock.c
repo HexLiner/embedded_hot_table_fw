@@ -127,9 +127,10 @@ error_t mcu_clock_set_normal_config(void) {
     FLASH->ACR = 1 << FLASH_ACR_LATENCY_Pos;  // p.59 - One wait state, if 24 MHz < SYSCLK ≤ 48 MHz
 
     // Set peripherals clock sources
-    RCC->CFGR3 &= ~(RCC_CFGR3_I2C1SW_Msk | RCC_CFGR3_USART1SW_Msk);
+    RCC->CFGR3 &= ~(RCC_CFGR3_I2C1SW_Msk | RCC_CFGR3_USART1SW_Msk | RCC_CFGR3_USBSW_Msk);
     RCC->CFGR3 |= (I2C1_SRC_SYSCLK << RCC_CFGR3_I2C1SW_Pos) |
-                  (UART1_SRC_APB << RCC_CFGR3_USART1SW_Pos);
+                  (UART1_SRC_APB << RCC_CFGR3_USART1SW_Pos) |
+                  (USB_SRC_PLLCLK << RCC_CFGR3_USBSW_Pos);
 
     NVIC_EnableIRQ(RCC_IRQn);
 
@@ -176,9 +177,10 @@ void mcu_clock_set_safe_config() {
     FLASH->ACR = 0 << FLASH_ACR_LATENCY_Pos;
 
     // Set peripherals clock sources
-    RCC->CFGR3 &= ~(RCC_CFGR3_I2C1SW_Msk | RCC_CFGR3_USART1SW_Msk);
+    RCC->CFGR3 &= ~(RCC_CFGR3_I2C1SW_Msk | RCC_CFGR3_USART1SW_Msk | RCC_CFGR3_USBSW_Msk);
     RCC->CFGR3 |= (I2C1_SRC_SYSCLK << RCC_CFGR3_I2C1SW_Pos) |
-                  (UART1_SRC_APB << RCC_CFGR3_USART1SW_Pos);
+                  (UART1_SRC_APB << RCC_CFGR3_USART1SW_Pos) | 
+                  (USB_SRC_NONE << RCC_CFGR3_USBSW_Pos);;
 
     // Disable HSE and PLLs
     RCC->CR &= ~(RCC_CR_PLLON_Msk | RCC_CR_HSEON_Msk);

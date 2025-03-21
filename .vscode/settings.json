@@ -1,0 +1,9 @@
+{
+    "files.associations": {
+        "mcu_clock.h": "c",
+        "sysclk.h": "c",
+        "twi_driver.h": "c",
+        "stdint.h": "c",
+        "cstdint": "cpp"
+    }
+}

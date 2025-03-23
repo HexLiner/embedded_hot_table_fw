@@ -16,7 +16,6 @@
 
 extern PCD_HandleTypeDef hpcd;
 static USBD_HandleTypeDef usbd_device;
-static USBD_CDC_ItfTypeDef usbd_cdc_fops;
 
 static int8_t TEMPLATE_Init(void);
 static int8_t TEMPLATE_DeInit(void);
@@ -37,6 +36,10 @@ USBD_CDC_LineCodingTypeDef linecoding = {
     0x08    /* nb. of bits 8*/
 };
 
+
+static uint8_t usb_cdc_rx_buff[128];
+static uint32_t usb_cdc_rx_data_size;
+static bool usb_cdc_is_data_received = false;
 
 
 
@@ -69,8 +72,7 @@ bool usb_cdc_send_data(const uint8_t *data, uint32_t size) {
     static uint8_t tx_buff[256];   ////
 
 
-    USBD_CDC_HandleTypeDef *hcdc = (USBD_CDC_HandleTypeDef*)usbd_device.pClassData;
-    if (hcdc->TxState != 0) return false;
+    if (!usb_cdc_is_data_sent()) return false;
 
     memcpy(tx_buff, data, size);
     USBD_CDC_SetTxBuffer(&usbd_device, tx_buff, size);
@@ -81,6 +83,12 @@ bool usb_cdc_send_data(const uint8_t *data, uint32_t size) {
 
 
 bool usb_cdc_receive_data(uint8_t *data, uint32_t *size) {
+    if (!usb_cdc_is_data_received) return false;
+
+    memcpy(data, usb_cdc_rx_buff, usb_cdc_rx_data_size);
+    *size = usb_cdc_rx_data_size;
+    usb_cdc_rx_data_size = 0;
+    usb_cdc_is_data_received = false;
     return true;
 }
 
@@ -88,12 +96,13 @@ bool usb_cdc_receive_data(uint8_t *data, uint32_t *size) {
 
 
 static int8_t TEMPLATE_Init(void) {
-  return 0;
+    USBD_CDC_SetRxBuffer(&usbd_device, usb_cdc_rx_buff);
+    return USBD_OK;
 }
 
 
 static int8_t TEMPLATE_DeInit(void) {
-  return 0;
+    return USBD_OK;
 }
 
 
@@ -154,12 +163,20 @@ static int8_t TEMPLATE_Control(uint8_t cmd, uint8_t *pbuf, uint16_t length) {
       break;
   }
 
-  return (0);
+  return USBD_OK;
 }
 
-
 static int8_t TEMPLATE_Receive(uint8_t *Buf, uint32_t *Len) {
-  return 0;
+    // reload buff ptr
+    USBD_CDC_SetRxBuffer(&usbd_device, Buf);
+    USBD_CDC_ReceivePacket(&usbd_device);
+
+    if (*Len > sizeof(usb_cdc_rx_buff)) return USBD_FAIL;
+    memcpy(usb_cdc_rx_buff, Buf, *Len);    //// need ring buffer
+    usb_cdc_rx_data_size = *Len;
+    usb_cdc_is_data_received = true;
+
+    return USBD_OK;
 }
 
 

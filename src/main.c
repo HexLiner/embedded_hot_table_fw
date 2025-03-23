@@ -20,6 +20,9 @@ i2c_settings_t i2c_settings = {
 };
 
 
+uint8_t rx_data_buff[128];
+uint32_t rx_data_size;
+
 
 int main (void) {
     mcu_clock_set_normal_config();
@@ -32,10 +35,12 @@ int main (void) {
 
 
     uint8_t *data = "Hallo USB!\r\n";
+    usb_cdc_send_data(data, 13);
     
     while (1) {
-        usb_cdc_send_data(data, 13);
-        delay_ms(2000);
+        if (usb_cdc_receive_data(rx_data_buff, &rx_data_size)) {
+            usb_cdc_send_data(rx_data_buff, rx_data_size);
+        }
     }
 
 

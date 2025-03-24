@@ -1,12 +1,16 @@
 {
     "files.associations": {
+        "*.c": "c",
         "mcu_clock.h": "c",
         "sysclk.h": "c",
         "twi_driver.h": "c",
         "stdint.h": "c",
         "cstdint": "cpp",
         "gpio.h": "c",
-        "stdbool.h": "c"
+        "stdbool.h": "c",
+        "mcu.h": "c",
+        "systimer.h": "c",
+        "cstdlib": "c"
     },
     "C_Cpp.dimInactiveRegions": false
 }

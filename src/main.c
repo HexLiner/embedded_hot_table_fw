@@ -1,6 +1,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <stdlib.h>
+#include "common/error.h"
 #include "hal/gpio/gpio.h"
 #include "hal/sysclk/sysclk.h"
 #include "hal/systimer/systimer.h"
@@ -8,6 +9,7 @@
 #include "hal/i2c/i2c_driver.h"
 ////#include "ssd1306.h"
 #include "usb_cdc.h"
+#include "cli.h"
 
 
 #define SSD1306_SLAVE_ADDR (0b01111000)  // or 0b01111010  - 0 1 1 1 1 0 SA0 R/W# 
@@ -30,17 +32,13 @@ int main (void) {
     sysclk_enable_peripheral(GPIOB);
     
     usb_cdc_init();
-    delay_ms(2000);
+    cli_init(usb_cdc_send_data, usb_cdc_receive_data);
+    delay_ms(5000);
 
+    cli_print("Hallo USB CLI!\r\n");
 
-
-    uint8_t *data = "Hallo USB!\r\n";
-    usb_cdc_send_data(data, 13);
-    
     while (1) {
-        if (usb_cdc_receive_data(rx_data_buff, &rx_data_size)) {
-            usb_cdc_send_data(rx_data_buff, rx_data_size);
-        }
+        cli_process();
     }
 
 

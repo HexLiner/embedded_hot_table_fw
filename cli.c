@@ -1,9 +1,29 @@
 #include "cli.h"
 #include <stdint.h>
 #include <stdbool.h>
-#include "cli_uart.h"
-#include "device_registers.h"
-#include "eeprom_driver.h"
+#include "common/error.h"
+#include "ring_buff.h"
+
+
+#define SYM_NONE                            (0xFF)
+#define SYM_CONTROL                         (0x80)
+#define SYM_BACKSPACE                       (SYM_CONTROL|0x01)
+#define SYM_TAB                             (SYM_CONTROL|0x02)
+#define SYM_ENTER                           (SYM_CONTROL|0x03)
+#define SYM_CTRLC                           (SYM_CONTROL|0x04)
+#define SYM_UP                              (SYM_CONTROL|0x05)
+#define SYM_DOWN                            (SYM_CONTROL|0x06)
+#define SYM_LEFT                            (SYM_CONTROL|0x07)
+#define SYM_RIGHT                           (SYM_CONTROL|0x08)
+#define SYM_DEL                             (SYM_CONTROL|0x09)
+#define SYM_HOME                            (SYM_CONTROL|0x0A)
+#define SYM_END                             (SYM_CONTROL|0x0B)
+
+
+static cli_send_data_callback send_data_callback = NULL;
+static cli_receive_data_callback receive_data_callback = NULL;
+static uint8_t tx_ring_buff_data[256];
+static ring_buff_t tx_ring_buff;
 
 
 static void cli_cmd_processing(void);
@@ -13,38 +33,65 @@ static void u8_to_hex_text(uint8_t value, uint8_t *result);
 
 
 
-void cli_init(void) {
-    cli_uart_init();
+void cli_init(cli_send_data_callback send_cb, cli_receive_data_callback recv_cb) {
+    send_data_callback = send_cb;
+    receive_data_callback = recv_cb;
 
-    cli_uart_tx_buff[cli_uart_tx_size] = '\r';
-    cli_uart_tx_size++;
-    cli_uart_tx_buff[cli_uart_tx_size] = '\n';
-    cli_uart_tx_size++;
-    cli_uart_tx_buff[cli_uart_tx_size] = '\n';
-    cli_uart_tx_size++;
-    cli_uart_tx_size = 0;
-    cli_uart_tx_buff[cli_uart_tx_size] = 'H';
-    cli_uart_tx_size++;
-    cli_uart_tx_buff[cli_uart_tx_size] = 'i';
-    cli_uart_tx_size++;
-    cli_uart_tx_buff[cli_uart_tx_size] = '\r';
-    cli_uart_tx_size++;
-    cli_uart_tx_buff[cli_uart_tx_size] = '\n';
-    cli_uart_tx_size++;
-    cli_uart_tx_buff[cli_uart_tx_size] = '@';
-    cli_uart_tx_size++;
-    cli_uart_tx_buff[cli_uart_tx_size] = ' ';
-    cli_uart_tx_size++;
-    cli_uart_send_answer();
+    ring_buff_init(&tx_ring_buff, tx_ring_buff_data, sizeof(tx_ring_buff_data));
 }
 
 
+
+
+
 void cli_process(void) {
+    uint8_t rx_buff[256];
+    uint32_t rx_symb_buff_index;
+    uint32_t rx_size, i;
+    uint8_t ctrl_code;
+
+
+    ctrl_code = SYM_NONE;
+    rx_symb_buff_index = 0;
+    if (cli_receive_data_callback(rx_buff, &rx_size, sizeof(rx_buff)) == E_OK) {
+        while(i = 0; i < rx_size; i++) {
+            if ( (rx_buff[i] >= '\x20') && (rx_buff[i] <= '\x7E') ) {     // 20..7E   Printable symbol code
+                rx_buff[rx_symb_buff_index] = rx_buff[i];
+                ring_buff_write(&tx_ring_buff, rx_buff[i]);
+                rx_symb_buff_index++;
+            }
+            else if (rx_buff[i] == '\x7F') {                      // 7F       Backspace code
+                if (rx_symb_buff_index > 0) rx_symb_buff_index--;  // delete last symbol
+                ring_buff_write(&tx_ring_buff, rx_buff[i]);
+            }
+            else if (rx_buff[i] == '\x0D') {                      // 0D       Enter code
+                ctrl_code = SYM_ENTER;
+                break;
+            }
+            else if (rx_buff[i] == '\x03') {                      // 03       Control-C code
+                ctrl_code = SYM_CTRLC;
+                break;
+            }
+        }
+    }
+
+
+    if (ring_buff_read_block(&tx_ring_buff, uint8_t *data, uint32_t max_data_size, uint32_t *actual_data_size);)
+
+
+
+
     if (cli_uart_is_cmd_recived()) {
         cli_cmd_processing();
         cli_uart_send_answer();
         ////cli_process_state = CLI_PROCESS_STATE_SEND_ANSWER;
     }
+}
+
+
+error_t cli_print(const uint8_t *str) {
+    uint32_t size = strlen(str);
+    return send_data_callback(str, size);
 }
 
 

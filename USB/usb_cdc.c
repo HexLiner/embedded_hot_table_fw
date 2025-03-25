@@ -38,8 +38,8 @@ USBD_CDC_LineCodingTypeDef linecoding = {
 };
 
 
-static uint8_t usb_cdc_tx_buff[128];
-static uint8_t usb_cdc_rx_buff[128];
+static uint8_t usb_cdc_tx_buff[64];
+static uint8_t usb_cdc_rx_buff[64];
 static uint32_t usb_cdc_rx_data_size;
 static bool usb_cdc_is_data_received = false;
 
@@ -63,10 +63,12 @@ bool usb_cdc_is_usb_connected(void) {
 }
 
 
-error_t usb_cdc_send_data(const uint8_t *data, uint32_t size) {
+error_t usb_cdc_send_data(const uint8_t *data, uint32_t size, uint32_t *max_size) {
     USBD_CDC_HandleTypeDef *hcdc = (USBD_CDC_HandleTypeDef*)usbd_device.pClassData;
     if (hcdc->TxState != 0) return E_BUSY;
-    if (size > sizeof(usb_cdc_tx_buff)) return E_OUT_OF_MEMORY;
+
+    *max_size = sizeof(usb_cdc_tx_buff);
+    if (size > *max_size) size = *max_size;
 
     memcpy(usb_cdc_tx_buff, data, size);
     USBD_CDC_SetTxBuffer(&usbd_device, usb_cdc_tx_buff, size);
@@ -76,17 +78,22 @@ error_t usb_cdc_send_data(const uint8_t *data, uint32_t size) {
 
 
 error_t usb_cdc_receive_data(uint8_t *data, uint32_t *size, uint32_t max_size) {
-    if (!usb_cdc_is_data_received) return E_NO_DATA;
-    if (usb_cdc_rx_data_size > max_size) return E_OUT_OF_MEMORY;
+    uint32_t read_size;
 
-    memcpy(data, usb_cdc_rx_buff, usb_cdc_rx_data_size);
-    *size = usb_cdc_rx_data_size;
+
+    if (!usb_cdc_is_data_received) return E_NO_DATA;
+
+    if (usb_cdc_rx_data_size > max_size) read_size = max_size;
+    else read_size = usb_cdc_rx_data_size;
+    usb_cdc_rx_data_size -= read_size;
+
+    memcpy(data, usb_cdc_rx_buff, read_size);
+    *size = read_size;
 
     // reload buff ptr
-    USBD_CDC_SetRxBuffer(&usbd_device, usb_cdc_rx_buff);
+    USBD_CDC_SetRxBuffer(&usbd_device, &usb_cdc_rx_buff[usb_cdc_rx_data_size]);
     USBD_CDC_ReceivePacket(&usbd_device);
-    usb_cdc_rx_data_size = 0;
-    usb_cdc_is_data_received = false;
+    if (usb_cdc_rx_data_size == 0) usb_cdc_is_data_received = false;
     
     return E_OK;
 }

@@ -7,7 +7,7 @@
 #include "hal/systimer/systimer.h"
 #include "mcu_clock.h"
 #include "hal/i2c/i2c_driver.h"
-////#include "ssd1306.h"
+#include "ssd1306.h"
 #include "usb_cdc.h"
 #include "cli.h"
 
@@ -22,8 +22,17 @@ i2c_settings_t i2c_settings = {
 };
 
 
-uint8_t rx_data_buff[128];
-uint32_t rx_data_size;
+error_t cli_cmd_lcd(uint32_t argc, const uint8_t **argv, cli_call_state_t state);
+
+
+
+const cli_cmd_t cli_cmds[] = {
+    {
+        .name = "lcd",
+        .usage = "lcd TEXT",
+        .funk = cli_cmd_lcd
+    }
+};
 
 
 int main (void) {
@@ -32,10 +41,14 @@ int main (void) {
     sysclk_enable_peripheral(GPIOB);
     
     usb_cdc_init();
-    cli_init(usb_cdc_send_data, usb_cdc_receive_data);
+    cli_init(usb_cdc_send_data, usb_cdc_receive_data, cli_cmds, 1);
     delay_ms(5000);
 
     cli_print("Hallo USB CLI!\r\n");
+
+    i2c_init(&i2c_handle, NULL, &i2c_settings);
+    ssd1306_init(i2c_handle, SSD1306_SLAVE_ADDR, 1000);
+    ssd1306_clear();
 
     while (1) {
         cli_process();
@@ -119,4 +132,12 @@ int main (void) {
         }
     }*/
 
+}
+
+
+error_t cli_cmd_lcd(uint32_t argc, const uint8_t **argv, cli_call_state_t state) {
+    ssd1306_clear();
+    ssd1306_print_str(*argv, SSD1306_FOUNT_MODE_K1, 0, 0);
+
+    return E_OK;
 }

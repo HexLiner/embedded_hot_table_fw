@@ -1,6 +1,7 @@
 #include "cli.h"
 #include <stdint.h>
 #include <stdbool.h>
+#include <string.h>
 #include "common/error.h"
 #include "ring_buff.h"
 
@@ -22,22 +23,35 @@
 
 static cli_send_data_callback send_data_callback = NULL;
 static cli_receive_data_callback receive_data_callback = NULL;
-static uint8_t tx_ring_buff_data[256];
+static uint8_t tx_ring_buff_data[100];
 static ring_buff_t tx_ring_buff;
+static uint8_t rx_buff[30];
+static uint32_t rx_buff_index;
+static bool is_rx_overflow;
+static const cli_cmd_t *cli_cmds_int;
+static uint32_t cli_cmds_qty_int;
+
+static bool cli_cmd_in_process;
 
 
-static void cli_cmd_processing(void);
-static bool hex_text_to_u8(uint8_t *simw_ptr, uint8_t *result);
-static void u8_to_hex_text(uint8_t value, uint8_t *result);
+
+static void cli_cmd_start(void);
+static void cli_cmd_break(void);
+static void cli_cmd_process(void);
 
 
 
-
-void cli_init(cli_send_data_callback send_cb, cli_receive_data_callback recv_cb) {
+void cli_init(cli_send_data_callback send_cb, cli_receive_data_callback recv_cb, const cli_cmd_t *cli_cmds, uint32_t cli_cmds_qty) {
     send_data_callback = send_cb;
     receive_data_callback = recv_cb;
+    cli_cmds_int = cli_cmds;
+    cli_cmds_qty_int = cli_cmds_qty;
 
+    rx_buff_index = 0;
+    is_rx_overflow = false;
     ring_buff_init(&tx_ring_buff, tx_ring_buff_data, sizeof(tx_ring_buff_data));
+
+    cli_cmd_in_process = false;
 }
 
 
@@ -45,58 +59,92 @@ void cli_init(cli_send_data_callback send_cb, cli_receive_data_callback recv_cb)
 
 
 void cli_process(void) {
-    uint8_t rx_buff[256];
-    uint32_t rx_symb_buff_index;
-    uint32_t rx_size, i;
+    uint32_t rx_raw_size, i;
     uint8_t ctrl_code;
+    uint8_t rx_raw_buff[30];
+    const uint8_t *tx_data_ptr;
+    uint32_t tx_data_size, max_tx_data_size;
 
 
     ctrl_code = SYM_NONE;
-    rx_symb_buff_index = 0;
-    if (cli_receive_data_callback(rx_buff, &rx_size, sizeof(rx_buff)) == E_OK) {
-        while(i = 0; i < rx_size; i++) {
-            if ( (rx_buff[i] >= '\x20') && (rx_buff[i] <= '\x7E') ) {     // 20..7E   Printable symbol code
-                rx_buff[rx_symb_buff_index] = rx_buff[i];
-                ring_buff_write(&tx_ring_buff, rx_buff[i]);
-                rx_symb_buff_index++;
+    if (receive_data_callback(rx_raw_buff, &rx_raw_size, sizeof(rx_raw_buff)) == E_OK) {
+        for(i = 0; i < rx_raw_size; i++) {
+            if (!cli_cmd_in_process) {
+                if ((rx_raw_buff[i] >= '\x20') && (rx_raw_buff[i] <= '\x7E')) {     // 20..7E   Printable symbol code
+                    ring_buff_write(&tx_ring_buff, rx_raw_buff[i]);
+                    if (rx_buff_index < sizeof(rx_buff)) {
+                        rx_buff[rx_buff_index] = rx_raw_buff[i];
+                        rx_buff_index++;
+                    }
+                    else {
+                        is_rx_overflow = true;
+                    }
+                }
+                else if (rx_raw_buff[i] == '\x7F') {                      // 7F       Backspace code
+                    if ((rx_buff_index > 0) && !is_rx_overflow) rx_buff_index--;  // delete last symbol
+                    ring_buff_write(&tx_ring_buff, rx_raw_buff[i]);
+                }
+                else if (rx_raw_buff[i] == '\x0D') {                      // 0D       Enter code
+                    cli_cmd_start();
+                }
             }
-            else if (rx_buff[i] == '\x7F') {                      // 7F       Backspace code
-                if (rx_symb_buff_index > 0) rx_symb_buff_index--;  // delete last symbol
-                ring_buff_write(&tx_ring_buff, rx_buff[i]);
-            }
-            else if (rx_buff[i] == '\x0D') {                      // 0D       Enter code
-                ctrl_code = SYM_ENTER;
-                break;
-            }
-            else if (rx_buff[i] == '\x03') {                      // 03       Control-C code
-                ctrl_code = SYM_CTRLC;
-                break;
+            else if (rx_raw_buff[i] == '\x03') {                      // 03       Control-C code
+                cli_cmd_break();
             }
         }
     }
 
+    cli_cmd_process();
 
-    if (ring_buff_read_block(&tx_ring_buff, uint8_t *data, uint32_t max_data_size, uint32_t *actual_data_size);)
-
-
-
-
-    if (cli_uart_is_cmd_recived()) {
-        cli_cmd_processing();
-        cli_uart_send_answer();
-        ////cli_process_state = CLI_PROCESS_STATE_SEND_ANSWER;
+    ring_buff_get_read_pos(&tx_ring_buff, &tx_data_ptr, &tx_data_size);
+    if (tx_data_size != 0) {
+        if (send_data_callback(tx_data_ptr, tx_data_size, &max_tx_data_size) == E_OK) {
+            if (tx_data_size > max_tx_data_size) tx_data_size = max_tx_data_size;
+            ring_buff_clear(&tx_ring_buff, tx_data_size);
+        }
     }
 }
 
 
 error_t cli_print(const uint8_t *str) {
-    uint32_t size = strlen(str);
-    return send_data_callback(str, size);
+    uint32_t size = strlen((char*)str);
+    return ring_buff_write_block(&tx_ring_buff, str, size);
 }
 
 
 
+static void cli_cmd_start(void) {
+    uint8_t *ptr;
+  
+  
+    if (rx_buff_index == 0) {   //// and all space symb
+        cli_print("\r\n> ");
+    }
+    else {
+        cli_cmd_in_process = true;
+        cli_print("CMD start\r\n");
 
+
+        rx_buff[rx_buff_index] = '\0';
+        ptr = rx_buff;
+        cli_cmds_int[0].funk(0, &ptr, CLI_CALL_FIRST);
+    }
+}
+
+static void cli_cmd_break(void) {
+    cli_cmd_in_process = false;
+    rx_buff_index = 0;
+    is_rx_overflow = false;
+    cli_print("CMD break\r\n> ");
+}
+
+static void cli_cmd_process(void) {
+    
+}
+
+
+
+/*
 static void cli_cmd_processing(void) {
     uint16_t addr;
     uint8_t value[4];
@@ -320,3 +368,4 @@ static void u8_to_hex_text(uint8_t value, uint8_t *result) {
     else result[0] = '0';
     result[0] += value_temp;
 }
+*/

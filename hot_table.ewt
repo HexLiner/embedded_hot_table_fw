@@ -5803,6 +5803,12 @@
     <group>
         <name>src</name>
         <file>
+            <name>$PROJ_DIR$\src\cli.c</name>
+        </file>
+        <file>
+            <name>$PROJ_DIR$\src\cli.h</name>
+        </file>
+        <file>
             <name>$PROJ_DIR$\src\irq_handlers.c</name>
         </file>
         <file>
@@ -5816,6 +5822,18 @@
         </file>
         <file>
             <name>$PROJ_DIR$\src\mcu_clock.h</name>
+        </file>
+        <file>
+            <name>$PROJ_DIR$\src\ring_buff.c</name>
+        </file>
+        <file>
+            <name>$PROJ_DIR$\src\ring_buff.h</name>
+        </file>
+        <file>
+            <name>$PROJ_DIR$\src\ssd1306.c</name>
+        </file>
+        <file>
+            <name>$PROJ_DIR$\src\ssd1306.h</name>
         </file>
     </group>
     <group>

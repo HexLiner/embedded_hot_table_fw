@@ -20,11 +20,13 @@ typedef struct {
 } ring_buff_t;
 
 
-static error_t ring_buff_init(ring_buff_t *buff, uint8_t *buff_data, uint32_t buff_data_size);
-static error_t ring_buff_read(ring_buff_t *buff, uint8_t *data, bool *is_last_data_byte);
-static error_t ring_buff_read_block(ring_buff_t *buff, uint8_t *data, uint32_t max_data_size, uint32_t *actual_data_size);
-static error_t ring_buff_write(ring_buff_t *buff, uint8_t data);
-static error_t ring_buff_write_block(ring_buff_t *buff, const uint8_t *data, uint32_t data_size);
+extern error_t ring_buff_init(ring_buff_t *buff, uint8_t *buff_data, uint32_t buff_data_size);
+extern error_t ring_buff_read(ring_buff_t *buff, uint8_t *data, bool *is_last_data_byte);
+extern error_t ring_buff_read_block(ring_buff_t *buff, uint8_t *data, uint32_t max_data_size, uint32_t *actual_data_size);
+extern error_t ring_buff_write(ring_buff_t *buff, uint8_t data);
+extern error_t ring_buff_write_block(ring_buff_t *buff, const uint8_t *data, uint32_t data_size);
 
+extern void ring_buff_get_read_pos(ring_buff_t *buff, const uint8_t **data_ptr, uint32_t *data_size);
+extern void ring_buff_clear(ring_buff_t *buff, uint32_t clear_size);
 
-#ednif    // _RING_BUFF_H_
+#endif    // _RING_BUFF_H_

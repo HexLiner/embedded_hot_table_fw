@@ -5824,6 +5824,12 @@
             <name>$PROJ_DIR$\src\mcu_clock.h</name>
         </file>
         <file>
+            <name>$PROJ_DIR$\src\parsers.c</name>
+        </file>
+        <file>
+            <name>$PROJ_DIR$\src\parsers.h</name>
+        </file>
+        <file>
             <name>$PROJ_DIR$\src\ring_buff.c</name>
         </file>
         <file>

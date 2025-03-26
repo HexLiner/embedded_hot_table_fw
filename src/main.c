@@ -23,6 +23,7 @@ i2c_settings_t i2c_settings = {
 
 
 error_t cli_cmd_lcd(uint32_t argc, const uint8_t **argv, cli_call_state_t state);
+error_t cli_cmd_lcdp(uint32_t argc, const uint8_t **argv, cli_call_state_t state);
 
 
 
@@ -31,6 +32,11 @@ const cli_cmd_t cli_cmds[] = {
         .name = "lcd",
         .usage = "lcd TEXT",
         .funk = cli_cmd_lcd
+    },
+    {
+        .name = "lcdp",
+        .usage = "lcdp QTY",
+        .funk = cli_cmd_lcdp
     }
 };
 
@@ -41,10 +47,10 @@ int main (void) {
     sysclk_enable_peripheral(GPIOB);
     
     usb_cdc_init();
-    cli_init(usb_cdc_send_data, usb_cdc_receive_data, cli_cmds, 1);
+    cli_init(usb_cdc_send_data, usb_cdc_receive_data, cli_cmds, 2);
     delay_ms(5000);
 
-    cli_print("Hallo USB CLI!\r\n");
+    cli_safe_print("Hallo USB CLI!yhutrhgbdgbgbogjbgjbdgbjfgibjidfjbiodjf5t54y54yyyyyyyy45y45y54y45y54y54y45y45y54y45y45y45y45y54y45y54y5666\r\n");
 
     i2c_init(&i2c_handle, NULL, &i2c_settings);
     ssd1306_init(i2c_handle, SSD1306_SLAVE_ADDR, 1000);
@@ -137,7 +143,53 @@ int main (void) {
 
 error_t cli_cmd_lcd(uint32_t argc, const uint8_t **argv, cli_call_state_t state) {
     ssd1306_clear();
-    ssd1306_print_str(*argv, SSD1306_FOUNT_MODE_K1, 0, 0);
+    if (argc > 1) {
+        ssd1306_print_str(argv[1], SSD1306_FOUNT_MODE_K2, 0, 0);
+    }
+    else if (argc > 2) {
+        cli_print("Incorrect arg!\r\n");
+    }
+
+    return E_OK;
+}
+
+error_t cli_cmd_lcdp(uint32_t argc, const uint8_t **argv, cli_call_state_t state) {
+    static uint16_t cnt;
+    static int32_t qty;
+    static timer_t timer;
+
+
+    if (state == CLI_CALL_FIRST) {
+        if (argc == 2) {
+            if (cli_string_to_digit(argv[1], &qty) != E_OK) {
+                cli_print("Incorrect arg!\r\n");
+                return E_OK;
+            }
+        }
+        else {
+            cli_print("Incorrect arg!\r\n");
+            return E_OK;
+        }
+
+        ssd1306_clear();
+        cnt = 0;
+        ssd1306_print_digit(cnt, 3, SSD1306_FOUNT_MODE_K2, 0, 0);
+        timer = timer_start_ms(500);
+        return E_ASYNC_WAIT;
+    }
+    else if (state == CLI_CALL_REPEATED) {
+        if (timer_triggered(timer)) {
+            cnt++;
+            ssd1306_print_digit(cnt, 3, SSD1306_FOUNT_MODE_K2, 0, 0);
+            timer = timer_start_ms(500);
+            if (cnt >= qty) return E_OK;
+        }
+        return E_ASYNC_WAIT;
+    }
+    else {
+        ssd1306_clear();
+        return E_OK;
+    }
 
     return E_OK;
 }

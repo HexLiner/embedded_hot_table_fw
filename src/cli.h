@@ -32,6 +32,9 @@ typedef struct {
 extern void cli_init(cli_send_data_callback send_cb, cli_receive_data_callback recv_cb, const cli_cmd_t *cli_cmds, uint32_t cli_cmds_qty);
 extern void cli_process(void);
 extern error_t cli_print(const uint8_t *str);
+extern error_t cli_safe_print(const uint8_t *str);
+
+extern error_t cli_string_to_digit(const uint8_t *str, int32_t *digit);
 
 
 #endif  // _CLI_H_

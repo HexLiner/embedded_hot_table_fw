@@ -3,7 +3,9 @@
 #include <stdbool.h>
 #include <string.h>
 #include "common/error.h"
+#include "hal/systimer/systimer.h"
 #include "ring_buff.h"
+#include "parsers.h"
 
 
 #define SYM_NONE                            (0xFF)
@@ -21,6 +23,9 @@
 #define SYM_END                             (SYM_CONTROL|0x0B)
 
 
+#define CLI_CMD_MAX_ARG_QTY (4)
+
+
 static cli_send_data_callback send_data_callback = NULL;
 static cli_receive_data_callback receive_data_callback = NULL;
 static uint8_t tx_ring_buff_data[100];
@@ -31,13 +36,17 @@ static bool is_rx_overflow;
 static const cli_cmd_t *cli_cmds_int;
 static uint32_t cli_cmds_qty_int;
 
-static bool cli_cmd_in_process;
+static int32_t cli_current_cmd_index;
+static uint32_t cli_cmd_argc;
+static const uint8_t *cli_cmd_argv[CLI_CMD_MAX_ARG_QTY];
 
-
+static void cli_send_process(void);
 
 static void cli_cmd_start(void);
 static void cli_cmd_break(void);
 static void cli_cmd_process(void);
+
+static void cli_int_cmd_help(void);
 
 
 
@@ -51,7 +60,7 @@ void cli_init(cli_send_data_callback send_cb, cli_receive_data_callback recv_cb,
     is_rx_overflow = false;
     ring_buff_init(&tx_ring_buff, tx_ring_buff_data, sizeof(tx_ring_buff_data));
 
-    cli_cmd_in_process = false;
+    cli_current_cmd_index = -1;
 }
 
 
@@ -60,19 +69,15 @@ void cli_init(cli_send_data_callback send_cb, cli_receive_data_callback recv_cb,
 
 void cli_process(void) {
     uint32_t rx_raw_size, i;
-    uint8_t ctrl_code;
     uint8_t rx_raw_buff[30];
-    const uint8_t *tx_data_ptr;
-    uint32_t tx_data_size, max_tx_data_size;
 
 
-    ctrl_code = SYM_NONE;
     if (receive_data_callback(rx_raw_buff, &rx_raw_size, sizeof(rx_raw_buff)) == E_OK) {
         for(i = 0; i < rx_raw_size; i++) {
-            if (!cli_cmd_in_process) {
+            if (cli_current_cmd_index == -1) {
                 if ((rx_raw_buff[i] >= '\x20') && (rx_raw_buff[i] <= '\x7E')) {     // 20..7E   Printable symbol code
                     ring_buff_write(&tx_ring_buff, rx_raw_buff[i]);
-                    if (rx_buff_index < sizeof(rx_buff)) {
+                    if (rx_buff_index < (sizeof(rx_buff) - 1)) {   // last rx_buff byte used for EOL
                         rx_buff[rx_buff_index] = rx_raw_buff[i];
                         rx_buff_index++;
                     }
@@ -95,7 +100,66 @@ void cli_process(void) {
     }
 
     cli_cmd_process();
+    cli_send_process();
+}
 
+
+error_t cli_print(const uint8_t *str) {
+    uint32_t size = strlen((char*)str);
+    return ring_buff_write_block(&tx_ring_buff, str, size);
+}
+
+
+error_t cli_safe_print(const uint8_t *str) {
+    timer_t timeout_timer;
+    uint32_t size, block_size, str_index;
+
+
+    size = strlen((char*)str);
+    if (size > sizeof(tx_ring_buff_data)) block_size = sizeof(tx_ring_buff_data);
+    else block_size = size;
+    str_index = 0;
+    timeout_timer = timer_start_ms(100);
+    while(size != 0) {
+        cli_send_process();
+        if (ring_buff_write_block(&tx_ring_buff, &str[str_index], block_size) == E_OK) {
+            str_index += block_size;
+            size -= block_size;
+            if (size > sizeof(tx_ring_buff_data)) block_size = sizeof(tx_ring_buff_data);
+            else block_size = size;
+        }
+        if (timer_triggered(timeout_timer)) return E_TIMEOUT;
+    }
+    
+    return E_OK;
+}
+
+
+error_t cli_string_to_digit(const uint8_t *str, int32_t *digit) {
+    char *end_ptr = NULL;
+
+
+    // Hexadecimal format
+    if ((str[0] == '0') && (str[1] == 'x')) {
+        *digit = strtoul((char*)str, &end_ptr, 16);
+    }
+    // Decimal format
+    else {
+        *digit = strtoul((char*)str, &end_ptr, 10);
+    }
+
+    if (*end_ptr != '\0') {
+        return E_INVALID_ARG;
+    }
+    return E_OK;
+}
+
+
+static void cli_send_process(void) {
+    const uint8_t *tx_data_ptr;
+    uint32_t tx_data_size, max_tx_data_size;
+    
+    
     ring_buff_get_read_pos(&tx_ring_buff, &tx_data_ptr, &tx_data_size);
     if (tx_data_size != 0) {
         if (send_data_callback(tx_data_ptr, tx_data_size, &max_tx_data_size) == E_OK) {
@@ -106,40 +170,76 @@ void cli_process(void) {
 }
 
 
-error_t cli_print(const uint8_t *str) {
-    uint32_t size = strlen((char*)str);
-    return ring_buff_write_block(&tx_ring_buff, str, size);
-}
-
-
-
 static void cli_cmd_start(void) {
-    uint8_t *ptr;
+    uint32_t i;
   
   
-    if (rx_buff_index == 0) {   //// and all space symb
+    rx_buff[rx_buff_index] = '\0';
+    pars_get_tokens_from_string(rx_buff, " ", cli_cmd_argv, CLI_CMD_MAX_ARG_QTY, &cli_cmd_argc);
+    if (cli_cmd_argc == 0) {
         cli_print("\r\n> ");
     }
     else {
-        cli_cmd_in_process = true;
-        cli_print("CMD start\r\n");
-
-
-        rx_buff[rx_buff_index] = '\0';
-        ptr = rx_buff;
-        cli_cmds_int[0].funk(0, &ptr, CLI_CALL_FIRST);
+        for (i = 0; i < cli_cmds_qty_int; i++) {
+            if (strcmp((char*)cli_cmd_argv[0], (char*)cli_cmds_int[i].name) == 0) break;
+        }
+        if (i < cli_cmds_qty_int) {
+            cli_current_cmd_index = i;
+            if (cli_cmds_int[cli_current_cmd_index].funk(cli_cmd_argc, cli_cmd_argv, CLI_CALL_FIRST) != E_ASYNC_WAIT) {
+                cli_current_cmd_index = -1;
+                rx_buff_index = 0;
+                is_rx_overflow = false;
+                cli_print("\r\n> ");
+            }
+        }
+        else if (strcmp((char*)cli_cmd_argv[0], "help") == 0) {
+            cli_int_cmd_help();
+            cli_current_cmd_index = -1;
+            rx_buff_index = 0;
+            is_rx_overflow = false;
+        }
+        else {
+            cli_current_cmd_index = -1;
+            rx_buff_index = 0;
+            is_rx_overflow = false;
+            cli_print("\r\nIncorrect cmd!\r\n> ");
+        }
     }
 }
 
 static void cli_cmd_break(void) {
-    cli_cmd_in_process = false;
+    cli_cmds_int[cli_current_cmd_index].funk(cli_cmd_argc, cli_cmd_argv, CLI_CALL_TERMINATE);
+    cli_current_cmd_index = -1;
     rx_buff_index = 0;
     is_rx_overflow = false;
-    cli_print("CMD break\r\n> ");
+    cli_print("\r\n> ");
 }
 
 static void cli_cmd_process(void) {
-    
+    if (cli_current_cmd_index >= 0) {
+        if (cli_cmds_int[cli_current_cmd_index].funk(cli_cmd_argc, cli_cmd_argv, CLI_CALL_REPEATED) != E_ASYNC_WAIT) {
+            cli_current_cmd_index = -1;
+            rx_buff_index = 0;
+            is_rx_overflow = false;
+            cli_print("\r\n> ");
+        }
+    }
+}
+
+
+
+
+static void cli_int_cmd_help(void) {
+    uint32_t i;
+
+
+    for (i = 0; i < cli_cmds_qty_int; i++) {
+        cli_safe_print("\r\n");
+        cli_safe_print(cli_cmds_int[i].name);
+        cli_safe_print("    ");
+        cli_safe_print(cli_cmds_int[i].usage);
+    }
+    cli_safe_print("\r\n\r\n> ");
 }
 
 

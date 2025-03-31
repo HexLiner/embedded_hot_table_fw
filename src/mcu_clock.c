@@ -6,7 +6,7 @@
 #include "mcu_clock.h"
 #include <stdbool.h>
 #include <stdint.h>
-#include "cmsis/stm32f070x6.h"
+#include "common/mcu.h"
 #include "common/error.h"
 #include "hal/sysclk/sysclk.h"
 #include "hal/systimer/systimer.h"
@@ -18,9 +18,6 @@ static const sysclk_extcfg_t sysclk_extcfg = {
     .lse_freq_hz      = 1,
     .hse_freq_hz      = 16'000'000,
 };
-
-
-void RCC_IRQHandler(void);
 
 
 
@@ -191,7 +188,10 @@ void mcu_clock_set_safe_config() {
 
 
 
+
+void RCC_IRQHandler(void);
 void RCC_IRQHandler(void) {
+    ////
     // HSE error interrupt
     if (RCC->CIR & RCC_CIR_CSSF) {
         /*

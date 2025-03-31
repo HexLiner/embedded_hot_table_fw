@@ -11,7 +11,12 @@
         "mcu.h": "c",
         "systimer.h": "c",
         "cstdlib": "c",
-        "error.h": "c"
+        "error.h": "c",
+        "parsers.h": "c",
+        "i2c_driver.h": "c",
+        "profiles.h": "c",
+        "cli_cmd.h": "c",
+        "int_flash_driver.h": "c"
     },
     "C_Cpp.dimInactiveRegions": false
 }

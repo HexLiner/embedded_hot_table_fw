@@ -140,6 +140,46 @@ __ramfunc bool flash_write_word(uint32_t flash_address, uint16_t data) {
 }
 
 
+
+__ramfunc bool flash_write_bytes(uint32_t flash_address, const uint8_t *buffer, uint32_t size) {
+    int32_t buff_index;
+    uint16_t word;
+
+
+    buff_index = 0;
+    if (flash_address & 0x01) {
+        flash_address--;
+        buff_index = -1;
+    }
+
+    while (size != 0) {
+        size--;
+        if (buff_index == -1) {
+            word = 0xFF00;
+            word |= buffer[0];
+        }
+        else if (size == 0) {
+            word = buffer[buff_index];
+            word = word << 8;
+            word |= 0xFF;
+        }
+        else {
+            word = buffer[buff_index];
+            word = word << 8;
+            word |= buffer[buff_index + 1];
+            size--;
+            buff_index++;
+        }
+        buff_index++;
+
+        if (!flash_write_word(flash_address, word)) return false;
+        flash_address += 2;
+    }
+
+    return true;
+}
+
+
 //  ***************************************************************************
 /// @brief  Read data from FLASH
 /// @param  flash_address

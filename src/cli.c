@@ -8,104 +8,61 @@
 #include "parsers.h"
 
 
-#define SYM_NONE                            (0xFF)
-#define SYM_CONTROL                         (0x80)
-#define SYM_BACKSPACE                       (SYM_CONTROL|0x01)
-#define SYM_TAB                             (SYM_CONTROL|0x02)
-#define SYM_ENTER                           (SYM_CONTROL|0x03)
-#define SYM_CTRLC                           (SYM_CONTROL|0x04)
-#define SYM_UP                              (SYM_CONTROL|0x05)
-#define SYM_DOWN                            (SYM_CONTROL|0x06)
-#define SYM_LEFT                            (SYM_CONTROL|0x07)
-#define SYM_RIGHT                           (SYM_CONTROL|0x08)
-#define SYM_DEL                             (SYM_CONTROL|0x09)
-#define SYM_HOME                            (SYM_CONTROL|0x0A)
-#define SYM_END                             (SYM_CONTROL|0x0B)
-
-
-#define CLI_CMD_MAX_ARG_QTY (4)
+#define CLI_CMD_INACTIVE_INDEX (-1)
 
 
 static cli_send_data_callback send_data_callback = NULL;
 static cli_receive_data_callback receive_data_callback = NULL;
-static uint8_t tx_ring_buff_data[100];
+static uint8_t tx_ring_buff_data[CLI_TX_BUFF_SIZE];
 static ring_buff_t tx_ring_buff;
-static uint8_t rx_buff[30];
+static uint8_t rx_buff[CLI_RX_BUFF_SIZE];
 static uint32_t rx_buff_index;
 static bool is_rx_overflow;
-static const cli_cmd_t *cli_cmds_int;
-static uint32_t cli_cmds_qty_int;
 
+static const cli_cmd_t *cli_ext_cmds;
+static uint32_t cli_ext_cmds_qty;
 static int32_t cli_current_cmd_index;
 static uint32_t cli_cmd_argc;
 static const uint8_t *cli_cmd_argv[CLI_CMD_MAX_ARG_QTY];
 
+
 static void cli_send_process(void);
+static void cli_rx_process(void);
 
 static void cli_cmd_start(void);
-static void cli_cmd_break(void);
 static void cli_cmd_process(void);
+static void cli_cmd_break(void);
 
 static void cli_int_cmd_help(void);
+
 
 
 
 void cli_init(cli_send_data_callback send_cb, cli_receive_data_callback recv_cb, const cli_cmd_t *cli_cmds, uint32_t cli_cmds_qty) {
     send_data_callback = send_cb;
     receive_data_callback = recv_cb;
-    cli_cmds_int = cli_cmds;
-    cli_cmds_qty_int = cli_cmds_qty;
-
     rx_buff_index = 0;
     is_rx_overflow = false;
     ring_buff_init(&tx_ring_buff, tx_ring_buff_data, sizeof(tx_ring_buff_data));
 
-    cli_current_cmd_index = -1;
+    cli_ext_cmds = cli_cmds;
+    cli_ext_cmds_qty = cli_cmds_qty;
+    cli_current_cmd_index = CLI_CMD_INACTIVE_INDEX;
 }
 
 
-
-
-
 void cli_process(void) {
-    uint32_t rx_raw_size, i;
-    uint8_t rx_raw_buff[30];
-
-
-    if (receive_data_callback(rx_raw_buff, &rx_raw_size, sizeof(rx_raw_buff)) == E_OK) {
-        for(i = 0; i < rx_raw_size; i++) {
-            if (cli_current_cmd_index == -1) {
-                if ((rx_raw_buff[i] >= '\x20') && (rx_raw_buff[i] <= '\x7E')) {     // 20..7E   Printable symbol code
-                    ring_buff_write(&tx_ring_buff, rx_raw_buff[i]);
-                    if (rx_buff_index < (sizeof(rx_buff) - 1)) {   // last rx_buff byte used for EOL
-                        rx_buff[rx_buff_index] = rx_raw_buff[i];
-                        rx_buff_index++;
-                    }
-                    else {
-                        is_rx_overflow = true;
-                    }
-                }
-                else if (rx_raw_buff[i] == '\x7F') {                      // 7F       Backspace code
-                    if ((rx_buff_index > 0) && !is_rx_overflow) rx_buff_index--;  // delete last symbol
-                    ring_buff_write(&tx_ring_buff, rx_raw_buff[i]);
-                }
-                else if (rx_raw_buff[i] == '\x0D') {                      // 0D       Enter code
-                    cli_cmd_start();
-                }
-            }
-            else if (rx_raw_buff[i] == '\x03') {                      // 03       Control-C code
-                cli_cmd_break();
-            }
-        }
-    }
-
+    cli_rx_process();
     cli_cmd_process();
     cli_send_process();
 }
 
 
 error_t cli_print(const uint8_t *str) {
-    uint32_t size = strlen((char*)str);
+    uint32_t size;
+    
+
+    size = strlen((char*)str);
     return ring_buff_write_block(&tx_ring_buff, str, size);
 }
 
@@ -135,24 +92,6 @@ error_t cli_safe_print(const uint8_t *str) {
 }
 
 
-error_t cli_string_to_digit(const uint8_t *str, int32_t *digit) {
-    char *end_ptr = NULL;
-
-
-    // Hexadecimal format
-    if ((str[0] == '0') && (str[1] == 'x')) {
-        *digit = strtoul((char*)str, &end_ptr, 16);
-    }
-    // Decimal format
-    else {
-        *digit = strtoul((char*)str, &end_ptr, 10);
-    }
-
-    if (*end_ptr != '\0') {
-        return E_INVALID_ARG;
-    }
-    return E_OK;
-}
 
 
 static void cli_send_process(void) {
@@ -170,60 +109,104 @@ static void cli_send_process(void) {
 }
 
 
+static void cli_rx_process(void) {
+    uint32_t rx_raw_size, i;
+    uint8_t rx_raw_buff[CLI_RX_RAW_BUFF_SIZE];
+
+
+    if (receive_data_callback(rx_raw_buff, &rx_raw_size, sizeof(rx_raw_buff)) == E_OK) {
+        for (i = 0; i < rx_raw_size; i++) {
+            if (cli_current_cmd_index == CLI_CMD_INACTIVE_INDEX) {
+                if ((rx_raw_buff[i] >= '\x20') && (rx_raw_buff[i] <= '\x7E')) {     // 20..7E - Printable symbol code
+                    ring_buff_write(&tx_ring_buff, rx_raw_buff[i]);    // echo
+                    if (rx_buff_index < (sizeof(rx_buff) - 1)) {   // last rx_buff byte used for EOL
+                        rx_buff[rx_buff_index] = rx_raw_buff[i];
+                        rx_buff_index++;
+                    }
+                    else {
+                        is_rx_overflow = true;
+                    }
+                }
+                else if (rx_raw_buff[i] == '\x7F') {    // 7F - Backspace code
+                    ring_buff_write(&tx_ring_buff, rx_raw_buff[i]);    // echo
+                    if ((rx_buff_index > 0) && !is_rx_overflow) rx_buff_index--;  // delete last symbol
+                }
+                else if (rx_raw_buff[i] == '\x0D') {    // 0D - Enter code
+                    cli_cmd_start();
+                }
+            }
+            else if (rx_raw_buff[i] == '\x03') {    // 03 - Control-C code
+                cli_cmd_break();
+            }
+        }
+    }
+}
+
+
+
 static void cli_cmd_start(void) {
-    uint32_t i;
+    const uint8_t *cli_incorrect_cmd_msg = "\r\nCMD not found!";
+    error_t result;
   
   
     rx_buff[rx_buff_index] = '\0';
     pars_get_tokens_from_string(rx_buff, " ", cli_cmd_argv, CLI_CMD_MAX_ARG_QTY, &cli_cmd_argc);
     if (cli_cmd_argc == 0) {
-        cli_print("\r\n> ");
+        cli_print(CLI_PROMPT);
+    }
+    else if (is_rx_overflow) {
+        rx_buff_index = 0;
+        is_rx_overflow = false;
+        cli_print(cli_incorrect_cmd_msg);
+        cli_print(CLI_PROMPT);
+
     }
     else {
-        for (i = 0; i < cli_cmds_qty_int; i++) {
-            if (strcmp((char*)cli_cmd_argv[0], (char*)cli_cmds_int[i].name) == 0) break;
+        for (cli_current_cmd_index = (cli_ext_cmds_qty - 1); cli_current_cmd_index > CLI_CMD_INACTIVE_INDEX; cli_current_cmd_index--) {
+            if (strcmp((char*)cli_cmd_argv[0], (char*)cli_ext_cmds[cli_current_cmd_index].name) == 0) break;
         }
-        if (i < cli_cmds_qty_int) {
-            cli_current_cmd_index = i;
-            if (cli_cmds_int[cli_current_cmd_index].funk(cli_cmd_argc, cli_cmd_argv, CLI_CALL_FIRST) != E_ASYNC_WAIT) {
-                cli_current_cmd_index = -1;
+
+        if (cli_current_cmd_index != CLI_CMD_INACTIVE_INDEX) {
+            result = cli_ext_cmds[cli_current_cmd_index].func(cli_cmd_argc, cli_cmd_argv, CLI_CALL_FIRST);
+            if (result != E_ASYNC_WAIT) {
+                cli_current_cmd_index = CLI_CMD_INACTIVE_INDEX;
                 rx_buff_index = 0;
-                is_rx_overflow = false;
-                cli_print("\r\n> ");
+                if (result == E_INVALID_ARG) cli_print("Incorrect arg!\r\n");
+                cli_print(CLI_PROMPT);
             }
         }
         else if (strcmp((char*)cli_cmd_argv[0], "help") == 0) {
             cli_int_cmd_help();
-            cli_current_cmd_index = -1;
             rx_buff_index = 0;
-            is_rx_overflow = false;
+            cli_print(CLI_PROMPT);
         }
         else {
-            cli_current_cmd_index = -1;
             rx_buff_index = 0;
-            is_rx_overflow = false;
-            cli_print("\r\nIncorrect cmd!\r\n> ");
+            cli_print(cli_incorrect_cmd_msg);
+            cli_print(CLI_PROMPT);
         }
     }
 }
 
-static void cli_cmd_break(void) {
-    cli_cmds_int[cli_current_cmd_index].funk(cli_cmd_argc, cli_cmd_argv, CLI_CALL_TERMINATE);
-    cli_current_cmd_index = -1;
-    rx_buff_index = 0;
-    is_rx_overflow = false;
-    cli_print("\r\n> ");
-}
 
 static void cli_cmd_process(void) {
-    if (cli_current_cmd_index >= 0) {
-        if (cli_cmds_int[cli_current_cmd_index].funk(cli_cmd_argc, cli_cmd_argv, CLI_CALL_REPEATED) != E_ASYNC_WAIT) {
-            cli_current_cmd_index = -1;
-            rx_buff_index = 0;
-            is_rx_overflow = false;
-            cli_print("\r\n> ");
-        }
+    if (cli_current_cmd_index == CLI_CMD_INACTIVE_INDEX) return;
+
+    if (cli_ext_cmds[cli_current_cmd_index].func(cli_cmd_argc, cli_cmd_argv, CLI_CALL_REPEATED) != E_ASYNC_WAIT) {
+        cli_current_cmd_index = CLI_CMD_INACTIVE_INDEX;
+        rx_buff_index = 0;
+        cli_print(CLI_PROMPT);
     }
+}
+
+
+static void cli_cmd_break(void) {
+    if (cli_current_cmd_index == CLI_CMD_INACTIVE_INDEX) return;
+
+    cli_ext_cmds[cli_current_cmd_index].func(cli_cmd_argc, cli_cmd_argv, CLI_CALL_TERMINATE);
+    cli_current_cmd_index = CLI_CMD_INACTIVE_INDEX;
+    rx_buff_index = 0;
+    cli_print(CLI_PROMPT);
 }
 
 
@@ -233,13 +216,15 @@ static void cli_int_cmd_help(void) {
     uint32_t i;
 
 
-    for (i = 0; i < cli_cmds_qty_int; i++) {
+    for (i = 0; i < cli_ext_cmds_qty; i++) {
         cli_safe_print("\r\n");
-        cli_safe_print(cli_cmds_int[i].name);
-        cli_safe_print("    ");
-        cli_safe_print(cli_cmds_int[i].usage);
+        cli_safe_print(cli_ext_cmds[i].name);
+        if (cli_ext_cmds[i].usage != NULL) {
+            cli_safe_print(" ");
+            cli_safe_print(cli_ext_cmds[i].usage);
+        }
     }
-    cli_safe_print("\r\n\r\n> ");
+    cli_safe_print("\r\n");
 }
 
 

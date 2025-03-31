@@ -5803,10 +5803,46 @@
     <group>
         <name>src</name>
         <file>
+            <name>$PROJ_DIR$\src\button_driver.c</name>
+        </file>
+        <file>
+            <name>$PROJ_DIR$\src\button_driver.h</name>
+        </file>
+        <file>
             <name>$PROJ_DIR$\src\cli.c</name>
         </file>
         <file>
             <name>$PROJ_DIR$\src\cli.h</name>
+        </file>
+        <file>
+            <name>$PROJ_DIR$\src\cli_cmd.c</name>
+        </file>
+        <file>
+            <name>$PROJ_DIR$\src\cli_cmd.h</name>
+        </file>
+        <file>
+            <name>$PROJ_DIR$\src\gui.c</name>
+        </file>
+        <file>
+            <name>$PROJ_DIR$\src\gui.h</name>
+        </file>
+        <file>
+            <name>$PROJ_DIR$\src\indicators_driver.c</name>
+        </file>
+        <file>
+            <name>$PROJ_DIR$\src\indicators_driver.h</name>
+        </file>
+        <file>
+            <name>$PROJ_DIR$\src\int_adc_driver.c</name>
+        </file>
+        <file>
+            <name>$PROJ_DIR$\src\int_adc_driver.h</name>
+        </file>
+        <file>
+            <name>$PROJ_DIR$\src\int_flash_driver.c</name>
+        </file>
+        <file>
+            <name>$PROJ_DIR$\src\int_flash_driver.h</name>
         </file>
         <file>
             <name>$PROJ_DIR$\src\irq_handlers.c</name>
@@ -5824,10 +5860,22 @@
             <name>$PROJ_DIR$\src\mcu_clock.h</name>
         </file>
         <file>
+            <name>$PROJ_DIR$\src\outputs_driver.c</name>
+        </file>
+        <file>
+            <name>$PROJ_DIR$\src\outputs_driver.h</name>
+        </file>
+        <file>
             <name>$PROJ_DIR$\src\parsers.c</name>
         </file>
         <file>
             <name>$PROJ_DIR$\src\parsers.h</name>
+        </file>
+        <file>
+            <name>$PROJ_DIR$\src\profiles.c</name>
+        </file>
+        <file>
+            <name>$PROJ_DIR$\src\profiles.h</name>
         </file>
         <file>
             <name>$PROJ_DIR$\src\ring_buff.c</name>
@@ -5840,6 +5888,12 @@
         </file>
         <file>
             <name>$PROJ_DIR$\src\ssd1306.h</name>
+        </file>
+        <file>
+            <name>$PROJ_DIR$\src\system_operation.c</name>
+        </file>
+        <file>
+            <name>$PROJ_DIR$\src\system_operation.h</name>
         </file>
     </group>
     <group>

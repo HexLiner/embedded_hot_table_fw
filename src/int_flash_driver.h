@@ -21,6 +21,10 @@ extern __ramfunc bool flash_write_word(uint32_t flash_address, uint16_t data);
 extern uint16_t flash_read_word_le(uint32_t flash_address);
 extern uint16_t flash_read_word_be(uint32_t flash_address);
 extern uint8_t flash_read_byte(uint32_t flash_address);
+
+
+
+extern bool flash_write_bytes(uint32_t flash_address, const uint8_t *buffer, uint32_t size);
 extern void flash_read_bytes(uint32_t flash_address, uint8_t *buffer, uint32_t size);
 
 

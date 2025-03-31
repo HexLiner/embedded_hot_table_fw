@@ -71,7 +71,7 @@ static void sysclk_get_peripheral_enr(const peripheral_t peripheral, volatile ui
     *reg = &(RCC->APB2ENR);
     switch ((uintptr_t)peripheral) {
         case (uintptr_t)SYSCFG:        *pos = RCC_APB2ENR_SYSCFGEN;  return;
-        case (uintptr_t)ADC:           *pos = RCC_APB2ENR_ADCEN;     return;
+        case (uintptr_t)ADC1:          *pos = RCC_APB2ENR_ADCEN;     return;
         case (uintptr_t)TIM1:          *pos = RCC_APB2ENR_TIM1EN;    return;
         case (uintptr_t)SPI1:          *pos = RCC_APB2ENR_SPI1EN;    return;
         case (uintptr_t)USART1:        *pos = RCC_APB2ENR_USART1EN;  return;

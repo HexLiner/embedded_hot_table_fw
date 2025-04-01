@@ -10,6 +10,7 @@
 #include <stdlib.h>
 #include "hal/gpio/gpio.h"
 #include "hal/systimer/systimer.h"
+#include "int_adc_driver.h"
 
 
 extern uint8_t heater_current_temperature_c;

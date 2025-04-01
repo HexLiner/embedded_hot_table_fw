@@ -16,7 +16,8 @@
         "i2c_driver.h": "c",
         "profiles.h": "c",
         "cli_cmd.h": "c",
-        "int_flash_driver.h": "c"
+        "int_flash_driver.h": "c",
+        "outputs_driver.h": "c"
     },
     "C_Cpp.dimInactiveRegions": false
 }

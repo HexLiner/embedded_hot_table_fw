@@ -57,6 +57,36 @@ void cli_process(void) {
     cli_send_process();
 }
 
+/*
+//  ***************************************************************************
+/// @brief  Safe print string with formatter
+/// @note   Variadic function
+/// @param  format - format specifiers string
+/// @return @ref error_t
+//  ***************************************************************************
+error_t cli_printf(void *stream, const char *format, ...) {
+    va_list va;
+    int len;
+    error_t result;
+    timer_t printf_busy_timeout_timer;
+    uint8_t 
+
+
+    va_start(va, format);
+    len = vsnprintf(cli_readline->buffer, 160, format, va);
+    va_end(va);
+
+    if (len > (160 - 1)) return E_NOT_COMPLETED;
+
+
+    printf_busy_timeout_timer = timer_start_ms(200);
+    do {
+        result = cli_puts(cli_readline, cli_readline->buffer);
+        if (timer_triggered(printf_busy_timeout_timer)) return result;
+    } while (result != E_OK);
+    return result;
+}*/
+
 
 error_t cli_print(const uint8_t *str) {
     uint32_t size;

@@ -44,7 +44,8 @@ extern void int_adc_init(int_adc_clk_src_t clk_src, int_adc_sample_rate_t smp_ra
 extern void int_adc_add_channel(int_adc_channel_t *int_adc_channel);
 extern void int_adc_start_continuous_converts(void);
 extern void int_adc_stop_continuous_converts(void);
-extern bool int_adc_is_data_ready(int_adc_channel_t *int_adc_channel, uint16_t *data);
+extern bool int_adc_is_raw_data_ready(int_adc_channel_t *int_adc_channel, uint16_t *data_raw);
+extern bool int_adc_is_voltage_data_ready(int_adc_channel_t *int_adc_channel, uint16_t *data_mv);
 
 
 #endif   // _INT_ADC_DRIVER_H_

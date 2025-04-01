@@ -7,6 +7,7 @@
 #define ADC_TIMEOUT_MS (20)
 
 
+static uint16_t int_adc_ref_mv;
 static int_adc_channel_t *int_adc_channels[17];
 static uint32_t active_channel;
 
@@ -43,6 +44,7 @@ void int_adc_init(int_adc_clk_src_t clk_src, int_adc_sample_rate_t smp_rate) {
     ADC1->IER = 0;
     NVIC_EnableIRQ(ADC1_IRQn);
 
+    int_adc_ref_mv = 3300;   ////
 }
 
 
@@ -66,13 +68,24 @@ void int_adc_stop_continuous_converts(void) {
 }
 
 
-bool int_adc_is_data_ready(int_adc_channel_t *int_adc_channel, uint16_t *data) {
+bool int_adc_is_raw_data_ready(int_adc_channel_t *int_adc_channel, uint16_t *data_raw) {
     if (int_adc_channel->samples_cnt < int_adc_channel->samples_qty) return false;
     int_adc_channel->buffer = int_adc_channel->buffer / int_adc_channel->samples_qty;
     *data = (uint16_t)int_adc_channel->buffer;
 
     int_adc_channel->buffer = 0;
     int_adc_channel->samples_cnt = 0;
+    return true;
+}
+
+
+bool int_adc_is_voltage_data_ready(int_adc_channel_t *int_adc_channel, uint16_t *data_mv) {
+    uint16_t data_raw;
+
+
+    if (!int_adc_is_raw_data_ready(int_adc_channel, &data_raw)) return false;
+    *data_mv = ((uint32_t)data_raw * int_adc_ref_mv) / 4095;
+
     return true;
 }
 

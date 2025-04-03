@@ -4,8 +4,10 @@
 #include "outputs_driver.h"
 
 
-#define FUN_PIN    (PA2)
-#define HEATER_PIN (PA3)
+#define FUN_PIN                         (PA2)
+#define HEATER_PIN                      (PA3)
+#define TEMPERATURE_SENSOR_PIN          (PA5)
+#define TEMPERATURE_SENSOR_ADC_CHANNEL  (5)
 
 
 #define FUN_ON gpio_set_pins(FUN_PIN)
@@ -43,7 +45,7 @@ static timer_t heater_timer;
 uint8_t heater_current_temperature_c;
 static uint8_t heater_target_temperature_c;
 static int_adc_channel_t int_adc_channel_temperature_sensor = {
-    .channel_number = 5,
+    .channel_number = TEMPERATURE_SENSOR_ADC_CHANNEL,
     .samples_qty = 20
 };
 
@@ -52,7 +54,8 @@ void outputs_init(void) {
     gpio_config_pins(FUN_PIN, GPIO_MODE_OUTPUT_PP, GPIO_PULL_NONE, GPIO_SPEED_LOW, 0, false);
     gpio_config_pins(HEATER_PIN, GPIO_MODE_OUTPUT_PP, GPIO_PULL_NONE, GPIO_SPEED_LOW, 0, false);
 
-    int_adc_init(INT_ADC_CLK_SRC_PCLK_DIV_4, INT_ADC_SAMPLE_RATE_71_5_ADC_CLOCK_CYCLE);
+    gpio_config_pins(TEMPERATURE_SENSOR_PIN, GPIO_MODE_ANALOG, GPIO_PULL_NONE, GPIO_SPEED_LOW, 0, false);
+    int_adc_init(INT_ADC_CLK_SRC_PCLK_DIV_4, INT_ADC_SAMPLE_RATE_239_5_ADC_CLOCK_CYCLE);
     int_adc_add_channel(&int_adc_channel_temperature_sensor);
     int_adc_start_continuous_converts();
     heater_current_temperature_c = HEATER_MAX_TEMP_C;

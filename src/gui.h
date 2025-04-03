@@ -34,5 +34,6 @@ extern void gui_profiles_menu_item_down(void);
 extern void gui_print_process_screen_init(uint8_t temperature_set_c);
 extern void gui_update_process_screen(uint8_t temperature_curr_c, uint32_t process_time_s);
 
+extern void gui_print_error(const uint8_t *error_msg);
 
 #endif   // _GUI_H_

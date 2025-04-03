@@ -17,7 +17,8 @@
         "profiles.h": "c",
         "cli_cmd.h": "c",
         "int_flash_driver.h": "c",
-        "outputs_driver.h": "c"
+        "outputs_driver.h": "c",
+        "system_operation.h": "c"
     },
     "C_Cpp.dimInactiveRegions": false
 }

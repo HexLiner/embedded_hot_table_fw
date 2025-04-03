@@ -9,7 +9,12 @@ typedef enum {
     SO_PROCESS_STATE_PROFILE_SELECTION,
     SO_PROCESS_STATE_PROCESS,
     SO_PROCESS_STATE_PROCESS_RESULT_SCREEN,
+    SO_PROCESS_STATE_CLI_DBG,
+    SO_PROCESS_STATE_FAIL,
 } system_operation_process_state_t;
+
+
+bool is_cli_dbg_mode;
 
 
 static bool is_any_button_event(void);
@@ -27,6 +32,8 @@ void system_operation_init(void) {
     button_init(&select_button, PA6, true);
     button_init(&start_button, PA7, true);
     outputs_init();
+
+    is_cli_dbg_mode = false;
 }
 
 
@@ -36,6 +43,7 @@ void system_operation_process(void) {
     static timer_t process_timer, process_stage_timer, update_process_screen_timer;
     static uint8_t profile_index, process_stage_index;
     static int32_t common_process_time_s;
+    uint8_t error_msg[8];
 
 
     gui_process();
@@ -43,6 +51,16 @@ void system_operation_process(void) {
     outputs_process();
     button_process(&select_button);
     button_process(&start_button);
+
+
+    if ((fail_code != 0) && (so_process_state != SO_PROCESS_STATE_FAIL)) {
+        is_state_init = true;
+        so_process_state = SO_PROCESS_STATE_FAIL;
+    }
+    if ((is_cli_dbg_mode) && (so_process_state != SO_PROCESS_STATE_CLI_DBG)) {
+        is_state_init = true;
+        so_process_state = SO_PROCESS_STATE_CLI_DBG;
+    }
 
 
     switch (so_process_state) {
@@ -163,6 +181,45 @@ void system_operation_process(void) {
                 indicators_buzzer_beep_terminate();
                 is_state_init = true;
                 so_process_state = SO_PROCESS_STATE_PROFILE_SELECTION;
+            }
+            break;
+
+
+        case SO_PROCESS_STATE_CLI_DBG:
+            if (is_state_init) {
+                fun_dis();
+                heater_dis();
+
+                gui_print_center_msg("CLI_DBG");
+                gui_reset_standby_timer();
+                indicators_buzzer_error_beep();
+                indicators_led_error(true);
+                clear_all_buttons_events_flags();
+                is_state_init = false;
+            }
+
+            if (is_any_button_event()) {
+                gui_reset_standby_timer();
+            }
+            break;
+
+
+        case SO_PROCESS_STATE_FAIL:
+            if (is_state_init) {
+                fun_dis();
+                heater_dis();
+
+                snprintf(error_msg, sizeof(error_msg), "0x%04X", fail_code);
+                gui_print_error(error_msg);
+                gui_reset_standby_timer();
+                indicators_buzzer_error_beep();
+                indicators_led_error(true);
+                clear_all_buttons_events_flags();
+                is_state_init = false;
+            }
+
+            if (is_any_button_event()) {
+                gui_reset_standby_timer();
             }
             break;
     }

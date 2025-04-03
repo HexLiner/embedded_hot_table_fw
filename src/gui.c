@@ -22,6 +22,9 @@ static timer_t standby_timer;
 bool gui_is_standby;
 
 
+static void gui_print_center_msg_int(const uint8_t *msg, ssd1306_fount_mode_t ssd1306_fount_mode, uint8_t y);
+
+
 
 void gui_init(void) {
     i2c_init(&i2c_handle, NULL, &i2c_settings);
@@ -57,17 +60,7 @@ void gui_clear_screen(void) {
 
 
 void gui_print_center_msg(const uint8_t *msg) {
-    uint8_t msg_size, x;
-
-
-    msg_size = strlen(msg);
-    if (msg_size > 10) return;
-    msg_size = (SSD1306_SIMW_W_WITH_SPACE * SSD1306_FOUNT_MODE_K2) * msg_size;
-    x = SSD1306_W - msg_size;
-    x = x / 2;
-
-    ssd1306_clear();
-    ssd1306_print_str(msg, SSD1306_FOUNT_MODE_K2, x, 8);
+    gui_print_center_msg_int(msg, SSD1306_FOUNT_MODE_K2, 8);
     is_profiles_menu_screen = false;
 }
 
@@ -130,3 +123,26 @@ void gui_update_process_screen(uint8_t temperature_curr_c, uint32_t process_time
     process_time_s_prev = process_time_s;
 }
 
+
+void gui_print_error(const uint8_t *error_msg) {
+    gui_print_center_msg_int("ERROR", SSD1306_FOUNT_MODE_K2, 2);
+    gui_print_center_msg_int(error_msg, SSD1306_FOUNT_MODE_K1, 22);
+    is_profiles_menu_screen = false;
+}
+
+
+
+
+static void gui_print_center_msg_int(const uint8_t *msg, ssd1306_fount_mode_t ssd1306_fount_mode, uint8_t y) {
+    uint8_t msg_size, x;
+
+
+    msg_size = strlen(msg);
+    if (msg_size > 10) return;
+    msg_size = (SSD1306_SIMW_W_WITH_SPACE * ssd1306_fount_mode) * msg_size;
+    x = SSD1306_W - msg_size;
+    x = x / 2;
+
+    ssd1306_clear();
+    ssd1306_print_str(msg, ssd1306_fount_mode, x, y);
+}

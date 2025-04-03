@@ -10,6 +10,7 @@
 #include "common/error.h"
 #include "hal/sysclk/sysclk.h"
 #include "hal/systimer/systimer.h"
+#include "error_handling.h"
 
 
 #define SYSCLK_SOURCE_NOTREADY_TIMEOUT_MS (100)
@@ -53,7 +54,7 @@ error_t mcu_clock_set_normal_config(void) {
         if (timer_triggered(timeout)) {
             // HSE doesn't work
             is_hse_error = true;
-            ////eh_set_warn_ext_oscillator_error();
+            eh_set_fail_ext_oscillator_error();
             break;
         }
     }
@@ -91,7 +92,7 @@ error_t mcu_clock_set_normal_config(void) {
     while (!(RCC->CR & RCC_CR_PLLRDY)) {
         if (timer_triggered(timeout)) {
             // PLL doesn't work
-            ////eh_set_fail_fw_error(E_FAILED);
+            eh_set_fail_fw_error(E_FAILED);
             mcu_clock_set_safe_config();
             return E_FAILED;
         }
@@ -114,7 +115,7 @@ error_t mcu_clock_set_normal_config(void) {
     while (((RCC->CFGR & RCC_CFGR_SWS) >> RCC_CFGR_SWS_Pos) != SYSCLK_SRC_PLLCLK) {
         if (timer_triggered(timeout)) {
             // SW doesn't switch
-            ////eh_set_fail_fw_error(E_FAILED);
+            eh_set_fail_fw_error(E_FAILED);
             mcu_clock_set_safe_config();
             return E_FAILED;
         }
@@ -191,27 +192,10 @@ void mcu_clock_set_safe_config() {
 
 void RCC_IRQHandler(void);
 void RCC_IRQHandler(void) {
-    ////
     // HSE error interrupt
     if (RCC->CIR & RCC_CIR_CSSF) {
-        /*
-        eh_set_warn_ext_oscillator_error();
-
-        SysTick->CTRL &= ~SysTick_CTRL_ENABLE_Msk;   // Disable SysTick for safely switch SYSCLK source (see #12681-2)
-
-        // Set PLL1 config
-        RCC->PLL1DIVR =   (0           << RCC_PLL1DIVR_P1_Pos)        |  // P = 96 / 1 = 96 MHz
-                          (3           << RCC_PLL1DIVR_Q1_Pos)        |  // Q = 96 / 4 = 24 MHz
-                          (0           << RCC_PLL1DIVR_R1_Pos)        |  // R output disabled
-                          (11          << RCC_PLL1DIVR_N1_Pos);          // VCO1freq = 8 * (12 + (0 / 2^13)) = 96 MHz
-
-        // Set PLLs clock source
-        RCC->PLLCKSELR &= ~RCC_PLLCKSELR_PLLSRC;
-        RCC->PLLCKSELR |= PLL_SRC_HSI << RCC_PLLCKSELR_PLLSRC_Pos;     // Fpllsrc = HSI = 64 MHz
-
-        systimer_init();
-        SysTick->CTRL |= SysTick_CTRL_ENABLE_Msk;    // Enable SysTick
-        */
+        eh_set_fail_ext_oscillator_error();
+        mcu_clock_set_normal_config();
     }
 
     RCC->CIR = 0xFFFF;   // Clear flags

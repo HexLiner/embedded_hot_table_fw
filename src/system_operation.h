@@ -17,6 +17,7 @@
 #include "gui.h"
 #include "profiles.h"
 #include "outputs_driver.h"
+#include "error_handling.h"
 
 
 extern void system_operation_init(void);

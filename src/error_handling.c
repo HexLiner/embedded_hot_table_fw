@@ -36,6 +36,10 @@ void eh_set_fail_ext_oscillator_error(void) {
     fail_code |= FAIL_CODE_EXT_OSCILLATOR_ERROR;
 }
 
+void eh_set_fail_mcu_overtemperature(void) {
+    fail_code |= FAIL_CODE_MCU_OVERTEMPERATURE;
+}
+
 void eh_set_fail_lcd_error(void) {
     fail_code |= FAIL_CODE_LCD_ERROR;
 }
@@ -43,5 +47,4 @@ void eh_set_fail_lcd_error(void) {
 
 void eh_set_warn_err_wdt_reset(void) {
     warning_code |= WARNING_CODE_ERR_WDT_RESET;
-    eh_write_log_rec();
 }

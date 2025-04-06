@@ -4,20 +4,66 @@
 #include "button_driver.h"
 
 
-void button_init(button_t *button, gpio_pin_t button_pin, bool is_inverse_button) {
-    gpio_config_pins(button_pin, GPIO_MODE_INPUT, GPIO_PULL_NONE, GPIO_SPEED_LOW, 0, false);
+static button_t *buttons[BUTTON_MAX_QTY];
+static uint8_t buttons_qty = 0;
 
-    button->button_pin = button_pin;
-    button->is_inverse_button = is_inverse_button;
-    button->button_process_state = BT_PROCESS_STATE_UP;
+
+static void single_button_process(button_t *button);
+
+
+void button_init(button_t *button) {
+    if (buttons_qty >= BUTTON_MAX_QTY) ERROR_FATAL(button_init, __LINE__);
+
+    buttons[buttons_qty] = button;
+    gpio_config_pins(buttons[buttons_qty]->button_pin, GPIO_MODE_INPUT, GPIO_PULL_NONE, GPIO_SPEED_LOW, 0, false);
+    buttons[buttons_qty]->button_process_state = BT_PROCESS_STATE_UP;
+    buttons[buttons_qty]->is_button_press_event = false;
+    buttons[buttons_qty]->is_button_long_press_event = false;
+
+    buttons_qty++;
+}
+
+
+void button_process(void) {
+    uint32_t i;
+
+
+    for (i = 0; i < buttons_qty; i++) {
+        single_button_process(buttons[i]);
+    }
+}
+
+
+bool button_is_pressed(button_t *button) {
+    if (gpio_read_pins(button->button_pin) == button->button_pin) return !button->is_inverse_button;
+    return button->is_inverse_button;
+}
+
+
+bool button_is_press_event(button_t *button) {
+    bool is_event = button->is_button_press_event;
+    button->is_button_press_event = false;
+    return is_event;
+}
+
+
+bool button_is_long_press_event(button_t *button) {
+    bool is_event = button->is_button_long_press_event;
+    button->is_button_long_press_event = false;
+    return is_event;
+}
+
+
+void button_clear_events_flags(button_t *button) {
     button->is_button_press_event = false;
     button->is_button_long_press_event = false;
 }
 
 
-void button_process(button_t *button) {
-    bool is_button_down = button_is_pressed(button);
 
+
+static void single_button_process(button_t *button) {
+    bool is_button_down = button_is_pressed(button);
     switch (button->button_process_state) {
         case BT_PROCESS_STATE_UP:
             if (is_button_down) {
@@ -69,30 +115,4 @@ void button_process(button_t *button) {
             }
             break; 
     }
-}
-
-
-bool button_is_pressed(button_t *button) {
-    if (gpio_read_pins(button->button_pin) == button->button_pin) return !button->is_inverse_button;
-    return button->is_inverse_button;
-}
-
-
-bool button_is_press_event(button_t *button) {
-    bool is_event = button->is_button_press_event;
-    button->is_button_press_event = false;
-    return is_event;
-}
-
-
-bool button_is_long_press_event(button_t *button) {
-    bool is_event = button->is_button_long_press_event;
-    button->is_button_long_press_event = false;
-    return is_event;
-}
-
-
-void button_clear_events_flags(button_t *button) {
-    button->is_button_press_event = false;
-    button->is_button_long_press_event = false;
 }

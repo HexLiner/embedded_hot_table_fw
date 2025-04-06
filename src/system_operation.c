@@ -21,7 +21,14 @@ static bool is_any_button_event(void);
 static void clear_all_buttons_events_flags(void);
 
 
-static button_t select_button, start_button;
+static button_t select_button = {
+    .button_pin = PA6,
+    .is_inverse_button = true
+};
+static button_t start_button = {
+    .button_pin = PA7,
+    .is_inverse_button = true
+};
 
 
 
@@ -29,8 +36,8 @@ static button_t select_button, start_button;
 void system_operation_init(void) {
     gui_init();
     indicators_init();
-    button_init(&select_button, PA6, true);
-    button_init(&start_button, PA7, true);
+    button_init(&select_button);
+    button_init(&start_button);
     outputs_init();
 
     is_cli_dbg_mode = false;
@@ -49,8 +56,7 @@ void system_operation_process(void) {
     gui_process();
     indicators_process();
     outputs_process();
-    button_process(&select_button);
-    button_process(&start_button);
+    button_process();
 
 
     if ((fail_code != 0) && (so_process_state != SO_PROCESS_STATE_FAIL)) {
@@ -110,7 +116,7 @@ void system_operation_process(void) {
             if (is_state_init) {
                 gui_reset_standby_timer();
                 common_process_time_s = 0;
-                for (process_stage_index = 0; process_stage_index < PROFILE_MAX_STAGES_QTY; process_stage_index++) {
+                for (process_stage_index = 0; process_stage_index < RG_PROFILE_STAGES_QTY; process_stage_index++) {
                     common_process_time_s += profiles[profile_index].stages[process_stage_index].duration_s;
                 }
                 process_stage_index = 0;
@@ -133,7 +139,7 @@ void system_operation_process(void) {
             // Stage done
             else if (is_state_init || timer_triggered(process_stage_timer)) {
                 // Next process stage
-                if ((process_stage_index < PROFILE_MAX_STAGES_QTY) && (profiles[profile_index].stages[process_stage_index].duration_s > 0)) {
+                if ((process_stage_index < RG_PROFILE_STAGES_QTY) && (profiles[profile_index].stages[process_stage_index].duration_s > 0)) {
                     gui_print_process_screen_init(profiles[profile_index].stages[process_stage_index].temperature_c);
                     gui_update_process_screen(heater_current_temperature_c, common_process_time_s);
 
@@ -209,7 +215,7 @@ void system_operation_process(void) {
                 fun_dis();
                 heater_dis();
 
-                snprintf(error_msg, sizeof(error_msg), "0x%04X", fail_code);
+                snprintf((char*)error_msg, sizeof(error_msg), "0x%04X", fail_code);
                 gui_print_error(error_msg);
                 gui_reset_standby_timer();
                 indicators_buzzer_error_beep();

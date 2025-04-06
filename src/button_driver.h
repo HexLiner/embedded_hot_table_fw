@@ -14,6 +14,8 @@
 #include "hal/systimer/systimer.h"
 
 
+#define BUTTON_MAX_QTY (2)
+
 #define BUTTON_DEBOUNCE_TIME_MS   (100)
 #define BUTTON_LONG_PRESS_TIME_MS (1000)
 
@@ -27,9 +29,10 @@ typedef enum {
 } button_process_state_t;
 
 typedef struct {
-    // Private variables
+    // Public variables
     gpio_pin_t button_pin;
     bool is_inverse_button;
+    // Private variables
     button_process_state_t button_process_state;
     timer_t debounce_timer;
     timer_t long_press_timer;
@@ -38,8 +41,8 @@ typedef struct {
 } button_t;
 
 
-extern void button_init(button_t *button, gpio_pin_t button_pin, bool is_inverse_button);
-extern void button_process(button_t *button);
+extern void button_init(button_t *button);
+extern void button_process(void);
 
 extern bool button_is_pressed(button_t *button);
 extern bool button_is_press_event(button_t *button);

@@ -4453,6 +4453,18 @@
             <name>$PROJ_DIR$\src\cli_cmd.h</name>
         </file>
         <file>
+            <name>$PROJ_DIR$\src\error_handling.c</name>
+        </file>
+        <file>
+            <name>$PROJ_DIR$\src\error_handling.h</name>
+        </file>
+        <file>
+            <name>$PROJ_DIR$\src\flash.c</name>
+        </file>
+        <file>
+            <name>$PROJ_DIR$\src\flash.h</name>
+        </file>
+        <file>
             <name>$PROJ_DIR$\src\gui.c</name>
         </file>
         <file>
@@ -4508,6 +4520,12 @@
         </file>
         <file>
             <name>$PROJ_DIR$\src\profiles.h</name>
+        </file>
+        <file>
+            <name>$PROJ_DIR$\src\registers.c</name>
+        </file>
+        <file>
+            <name>$PROJ_DIR$\src\registers.h</name>
         </file>
         <file>
             <name>$PROJ_DIR$\src\ring_buff.c</name>

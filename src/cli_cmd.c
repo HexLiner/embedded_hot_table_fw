@@ -11,14 +11,20 @@
 #include "parsers.h"
 #include "common/error.h"
 #include "hal/systimer/systimer.h"
-#include "profiles.h"
+#include "system_operation.h"
+#include "outputs_driver.h"
+#include "registers.h"
 
 
 static error_t cli_cmd_reboot(uint32_t argc, const uint8_t **argv, cli_call_state_t state);
-static error_t cli_cmd_pget(uint32_t argc, const uint8_t **argv, cli_call_state_t state);
-static error_t cli_cmd_psetn(uint32_t argc, const uint8_t **argv, cli_call_state_t state);
-static error_t cli_cmd_psets(uint32_t argc, const uint8_t **argv, cli_call_state_t state);
-static error_t cli_cmd_psave(uint32_t argc, const uint8_t **argv, cli_call_state_t state);
+static error_t cli_cmd_rr(uint32_t argc, const uint8_t **argv, cli_call_state_t state);
+static error_t cli_cmd_wr(uint32_t argc, const uint8_t **argv, cli_call_state_t state);
+static error_t cli_cmd_clidbg(uint32_t argc, const uint8_t **argv, cli_call_state_t state);
+static error_t cli_cmd_tlog(uint32_t argc, const uint8_t **argv, cli_call_state_t state);
+static error_t cli_cmd_tset(uint32_t argc, const uint8_t **argv, cli_call_state_t state);
+static error_t cli_cmd_tconf(uint32_t argc, const uint8_t **argv, cli_call_state_t state);
+static error_t cli_cmd_fset(uint32_t argc, const uint8_t **argv, cli_call_state_t state);
+
 
 const cli_cmd_t cli_cmds[] = {
     {
@@ -27,25 +33,40 @@ const cli_cmd_t cli_cmds[] = {
         .func = cli_cmd_reboot
     },
     {
-        .name = "pget",
-        .usage = "PROF_ID",
-        .func = cli_cmd_pget
+        .name = "rr",
+        .usage = "ADDR",
+        .func = cli_cmd_rr
     },
     {
-        .name = "psetn",
-        .usage = "PROF_ID NAME",
-        .func = cli_cmd_psetn
+        .name = "wr",
+        .usage = "ADDR VAL",
+        .func = cli_cmd_wr
     },
     {
-        .name = "psets",
-        .usage = "PROF_ID STAGE_ID TEMP_C DURATION_S FUN_PERIOD_S FUN_DUTY_C_PCT",
-        .func = cli_cmd_psets
+        .name = "clidbg",
+        .usage = "en",
+        .func = cli_cmd_clidbg
     },
     {
-        .name = "psave",
-        .usage = "",
-        .func = cli_cmd_psave
-    }
+        .name = "tlog",
+        .usage = "PERIOD_MS",
+        .func = cli_cmd_tlog
+    },
+    {
+        .name = "tset",
+        .usage = "TEMPERATURE_C",
+        .func = cli_cmd_tset
+    },
+    {
+        .name = "tconf",
+        .usage = "[ACT_MS DELAY_MS HYST_ON_C HYST_OFF_C]",
+        .func = cli_cmd_tconf
+    },
+    {
+        .name = "fset",
+        .usage = "PERIOD_S DUTY_CYCLE_PCT",
+        .func = cli_cmd_fset
+    },
 };
 
 
@@ -70,72 +91,134 @@ static error_t cli_cmd_reboot(uint32_t argc, const uint8_t **argv, cli_call_stat
 }
 
 
-static error_t cli_cmd_pget(uint32_t argc, const uint8_t **argv, cli_call_state_t state) {
-    int32_t profile_id;
-    char string[40];
-    uint32_t i;
+static error_t cli_cmd_rr(uint32_t argc, const uint8_t **argv, cli_call_state_t state) {
+    int32_t addr;
+    uint16_t reg_value;
+    uint8_t string[10];
 
 
     if (argc != 2) return E_INVALID_ARG;
-    if (!pars_string_to_digit(argv[1], &profile_id) || (profile_id >= MAX_PROFILES_QTY)) return E_INVALID_ARG;
+    if (!pars_string_to_digit(argv[1], &addr) || (addr > RG_MAX_REG_ADDR) || (addr < 0)) return E_INVALID_ARG;
 
-    cli_safe_print("\r\n");
-    cli_safe_print(profiles[profile_id].name);
-    for (i = 0; i < PROFILE_MAX_STAGES_QTY; i++) {
-        cli_safe_print("\r\n---");
-        snprintf(string, sizeof(string), "\r\nStage %d", i);    cli_safe_print(string);
-        snprintf(string, sizeof(string), "\r\nT = %d", profiles[profile_id].stages[i].temperature_c);    cli_safe_print(string);
-        snprintf(string, sizeof(string), "\r\nD = %d", profiles[profile_id].stages[i].duration_s);    cli_safe_print(string);
-        snprintf(string, sizeof(string), "\r\nFp = %d", profiles[profile_id].stages[i].fun_period_s);    cli_safe_print(string);
-        snprintf(string, sizeof(string), "\r\nFdc = %d", profiles[profile_id].stages[i].fun_duty_cycle_pct);    cli_safe_print(string);
-    }
-    cli_safe_print("\r\n");
-    return E_OK;
-}
-
-
-static error_t cli_cmd_psetn(uint32_t argc, const uint8_t **argv, cli_call_state_t state) {
-    int32_t profile_id;
-
-
-    if (argc < 2) return E_INVALID_ARG;
-    if (!pars_string_to_digit(argv[1], &profile_id) || (profile_id >= MAX_PROFILES_QTY)) return E_INVALID_ARG;
-    if (argc == 3) {
-        if (strlen(argv[2]) > PROFILE_MAX_NAME_SIZE) return E_INVALID_ARG;
-        strcpy(profiles[profile_id].name, argv[2]);
+    if (regs_read_reg(addr, &reg_value)) {
+        snprintf(string, sizeof(string), "%d", reg_value);
+        cli_safe_print(string);
     }
     else {
-        profiles[profile_id].name[0] = '\0';
+        return E_FAILED;
     }
-    cli_safe_print("\r\n");
     return E_OK;
 }
 
 
-static error_t cli_cmd_psets(uint32_t argc, const uint8_t **argv, cli_call_state_t state) {
-    int32_t profile_id, stage_id;
-    int32_t temp, duration, fun_period, fun_duty_cycle;
+static error_t cli_cmd_wr(uint32_t argc, const uint8_t **argv, cli_call_state_t state) {
+    int32_t addr;
+    int32_t reg_value;
 
 
-    if (argc != 7) return E_INVALID_ARG;
-    if (!pars_string_to_digit(argv[1], &profile_id) || (profile_id >= MAX_PROFILES_QTY)) return E_INVALID_ARG;
-    if (!pars_string_to_digit(argv[2], &stage_id) || (stage_id >= PROFILE_MAX_STAGES_QTY)) return E_INVALID_ARG;
-    if (!pars_string_to_digit(argv[3], &temp)) return E_INVALID_ARG;
-    if (!pars_string_to_digit(argv[4], &duration)) return E_INVALID_ARG;
-    if (!pars_string_to_digit(argv[5], &fun_period)) return E_INVALID_ARG;
-    if (!pars_string_to_digit(argv[6], &fun_duty_cycle)) return E_INVALID_ARG;
+    if (argc != 3) return E_INVALID_ARG;
+    if (!pars_string_to_digit(argv[1], &addr) || (addr > RG_MAX_REG_ADDR) || (addr < 0)) return E_INVALID_ARG;
+    if (!pars_string_to_digit(argv[2], &reg_value) || (reg_value > 0xFFFF) || (reg_value < 0)) return E_INVALID_ARG;
 
-    profiles[profile_id].stages[stage_id].temperature_c = temp;
-    profiles[profile_id].stages[stage_id].duration_s = duration;
-    profiles[profile_id].stages[stage_id].fun_period_s = fun_period;
-    profiles[profile_id].stages[stage_id].fun_duty_cycle_pct = fun_duty_cycle;
-    cli_safe_print("\r\n");
+    if (!regs_write_reg(addr, reg_value)) {
+        return E_FAILED;
+    }
     return E_OK;
 }
 
 
-static error_t cli_cmd_psave(uint32_t argc, const uint8_t **argv, cli_call_state_t state) {
-    profiles_save_all_to_flash();
-    cli_safe_print("\r\n");
+static error_t cli_cmd_clidbg(uint32_t argc, const uint8_t **argv, cli_call_state_t state) {
+    if (argc != 2) return E_INVALID_ARG;
+    if (!pars_is_there_template_in_string(argv[1], "en")) return E_INVALID_ARG;
+
+    is_cli_dbg_mode = true;
+    return E_OK;
+}
+
+
+static error_t cli_cmd_tlog(uint32_t argc, const uint8_t **argv, cli_call_state_t state) {
+    static int32_t log_period_ms;
+    static timer_t log_timer;
+    uint8_t string[10];
+
+
+    if (state == CLI_CALL_FIRST) {
+        if (argc != 2) return E_INVALID_ARG;
+        if (!pars_string_to_digit(argv[1], &log_period_ms) || (log_period_ms < 0)) return E_INVALID_ARG;
+
+        cli_safe_print("Temp_c; Heat_en");
+        log_timer = timer_start_ms(log_period_ms);
+        return E_ASYNC_WAIT;
+    }
+    if (state == CLI_CALL_REPEATED) {
+        if (timer_triggered(log_timer)) {
+            log_timer = timer_restart_ms(log_timer, log_period_ms);
+            snprintf(string, sizeof(string), "\r\n%d; %d", heater_current_temperature_c, is_heater_pin_en);
+            cli_safe_print(string);
+            return E_ASYNC_WAIT;
+        }
+
+        return E_ASYNC_WAIT;
+    }
+    return E_OK;
+}
+
+
+static error_t cli_cmd_tset(uint32_t argc, const uint8_t **argv, cli_call_state_t state) {
+    int32_t temperature_c;
+
+
+    if (argc != 2) return E_INVALID_ARG;
+    if (!is_cli_dbg_mode) {
+        cli_safe_print("CLI debug mode disabled!");
+    }
+    if (!pars_string_to_digit(argv[1], &temperature_c) || (temperature_c > HEATER_MAX_TEMP_C) || (temperature_c < 0)) return E_INVALID_ARG;
+
+    heater_en((uint8_t)temperature_c);
+    return E_OK;
+}
+
+
+static error_t cli_cmd_tconf(uint32_t argc, const uint8_t **argv, cli_call_state_t state) {
+    uint8_t string[100];
+    int32_t active_time_ms;
+    int32_t delay_time_ms;
+    int32_t hist_on_c;
+    int32_t hist_off_c;
+
+
+    if (argc == 1) {
+        snprintf(string, sizeof(string), "act_ms = %d\r\ndel_ms = %d\r\nhon_c = %d\r\nnoff_c = %d", heater_active_time_ms, heater_delay_time_ms, heater_hist_on_c, heater_hist_off_c);
+        cli_safe_print(string);
+        return E_OK;
+    }
+    else if (argc == 5) {
+        if (!pars_string_to_digit(argv[1], &active_time_ms) || (active_time_ms < 0)) return E_INVALID_ARG;
+        if (!pars_string_to_digit(argv[2], &delay_time_ms) || (delay_time_ms < 0)) return E_INVALID_ARG;
+        if (!pars_string_to_digit(argv[3], &hist_on_c) || (hist_on_c < 0) || (hist_on_c > 0xFF)) return E_INVALID_ARG;
+        if (!pars_string_to_digit(argv[4], &hist_off_c) || (hist_off_c < 0) || (hist_off_c > 0xFF)) return E_INVALID_ARG;
+        
+        heater_active_time_ms = active_time_ms;
+        heater_delay_time_ms = delay_time_ms;
+        heater_hist_on_c = hist_on_c;
+        heater_hist_off_c = hist_off_c;
+        return E_OK;
+    }
+    return E_INVALID_ARG;
+}
+
+
+static error_t cli_cmd_fset(uint32_t argc, const uint8_t **argv, cli_call_state_t state) {
+    int32_t period_s, duty_cycle_pct;
+
+
+    if (argc != 3) return E_INVALID_ARG;
+    if (!is_cli_dbg_mode) {
+        cli_safe_print("CLI debug mode disabled!");
+    }
+    if (!pars_string_to_digit(argv[1], &period_s) || (period_s < 0)) return E_INVALID_ARG;
+    if (!pars_string_to_digit(argv[2], &duty_cycle_pct) || (duty_cycle_pct < 0)) return E_INVALID_ARG;
+
+    fun_en((uint8_t)period_s, (uint32_t)duty_cycle_pct);
     return E_OK;
 }

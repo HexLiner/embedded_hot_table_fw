@@ -18,7 +18,13 @@
         "cli_cmd.h": "c",
         "int_flash_driver.h": "c",
         "outputs_driver.h": "c",
-        "system_operation.h": "c"
+        "system_operation.h": "c",
+        "indicators_driver.h": "c",
+        "stdlib.h": "c",
+        "int_adc_driver.h": "c",
+        "lib_base.h": "c",
+        "button_driver.h": "c",
+        "error_handling.h": "c"
     },
     "C_Cpp.dimInactiveRegions": false
 }

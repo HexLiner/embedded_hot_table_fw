@@ -11,36 +11,22 @@
 #include "cli_cmd.h"
 #include "system_operation.h"
 #include "error_handling.h"
+#include "registers.h"
+#include "flash.h"
 
 
 /*
-* PC скрипт для задания профилей
-* интерфейс задания профилей (универсальный с fotolight)
-
 * форматированный вывод CLI
 * редизайн буферов CLI
 
-* опрос внутреннего датчика температуры
-* доделать драйвер АЦП
-    * конфиг вычисления опорного напряжения
-    * конфиг кол-во активных каналов
-    * медианный фильтр
-    
-* перенос светодиода процесса на пин USB_PUP
+* медианный фильтр в драйвер АЦП
 
-* редизайн драйвера flash
 * добавить CRC в карту памяти
-
-*+ обработчик ошибок
-*+ экран кода ошибки в GUI
 
 * приоритеты IRQ
 
-* тестовые CLI команды для управления нагревателем с логгером работы нагревателя
-    * пререход в тестовый режим - clidbg en
-    * запустить логгер с выводом в консоль (текущая температура, нагреватель вкл/выкл) - tlog PERIOD_MS
-    * установить температуру - tset TEMPERATURE_C
-    * установить режим вентилятора - fset PERIOD_S DUTY_CYCLE_PCT
+* что-нибудь сделать в HardFault_Handler для индикации
+
 */
 
 
@@ -53,6 +39,8 @@ int main (void) {
     sysclk_enable_peripheral(GPIOA);
     sysclk_enable_peripheral(GPIOB);
     
+    flash_init();
+    regs_init();
     profiles_init();
     cli_cmd_init();
     system_operation_init();
@@ -60,6 +48,7 @@ int main (void) {
 
 
     while (1) {
+        regs_process();
         cli_cmd_process();
         system_operation_process();
     }

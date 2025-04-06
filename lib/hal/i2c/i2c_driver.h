@@ -11,11 +11,17 @@
 #include "hal/gpio/gpio.h"
 
 
+#define I2C_MAX_QTY (1)
+
+
 typedef struct {
-    uint32_t   speed_hz;
-    gpio_pin_t scl_pin;
-    gpio_pin_t sda_pin;
-} i2c_settings_t;
+    // Public
+    peripheral_t peripheral;
+    uint32_t     speed_hz;
+    gpio_pin_t   scl_pin;
+    gpio_pin_t   sda_pin;
+    // Private
+} i2c_t;
 
 typedef struct {
     uint8_t address;  // Slave address (left-aligned - mask 0xFE)
@@ -26,14 +32,13 @@ typedef struct {
 } i2c_transaction_t;
 
 
-extern error_t i2c_init(handle_t *handle, peripheral_t peripheral, const i2c_settings_t *settings);
-extern error_t i2c_deinit(handle_t handle);
+extern error_t i2c_init(i2c_t *i2c);
 
-extern error_t i2c_transfer_begin(handle_t handle, i2c_transaction_t *transaction);
-extern error_t i2c_transfer_end(handle_t handle, i2c_transaction_t *transaction, bool stop_transaction);
-extern error_t i2c_transfer_terminate(handle_t handle, i2c_transaction_t *transaction);
-extern error_t i2c_bus_clear(handle_t handle);
-extern error_t i2c_transfer(handle_t handle, i2c_transaction_t *transaction, uint32_t retries, uint32_t timeout_ms);
+extern error_t i2c_transfer_begin(i2c_t *i2c, i2c_transaction_t *transaction);
+extern error_t i2c_transfer_end(i2c_t *i2c, i2c_transaction_t *transaction, bool stop_transaction);
+extern error_t i2c_transfer_terminate(i2c_t *i2c, i2c_transaction_t *transaction);
+extern error_t i2c_bus_clear(i2c_t *i2c);
+extern error_t i2c_transfer(i2c_t *i2c, i2c_transaction_t *transaction, uint32_t retries, uint32_t timeout_ms);
 
 
 #endif // _I2C_DRIVER_H_

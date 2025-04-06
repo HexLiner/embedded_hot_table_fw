@@ -12,20 +12,14 @@
 #include "common/mcu.h"
 
 
-#define FLASH_PAGE_SIZE (1024)
+#define INT_FLASH_PAGE_SIZE (1024)
 
 
-extern bool flash_enable_protect(void);
-extern __ramfunc bool flash_erase_page(uint32_t flash_address);
-extern __ramfunc bool flash_write_word(uint32_t flash_address, uint16_t data);
-extern uint16_t flash_read_word_le(uint32_t flash_address);
-extern uint16_t flash_read_word_be(uint32_t flash_address);
-extern uint8_t flash_read_byte(uint32_t flash_address);
+extern bool int_flash_driver_enable_protect(void);
 
-
-
-extern bool flash_write_bytes(uint32_t flash_address, const uint8_t *buffer, uint32_t size);
-extern void flash_read_bytes(uint32_t flash_address, uint8_t *buffer, uint32_t size);
+extern __ramfunc bool int_flash_driver_erase_page(uint32_t address);
+extern __ramfunc bool int_flash_driver_write_bytes(uint32_t address, const uint8_t *data, uint32_t data_size);
+extern bool int_flash_driver_read_bytes(uint32_t address, uint8_t *data, uint32_t data_size);
 
 
 #endif // _INT_FLASH_DRIVER_H_

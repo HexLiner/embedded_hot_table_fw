@@ -4,7 +4,8 @@
 #include "indicators_driver.h"
 
 
-#define LEDS_BUZZER_PIN (PA4)
+#define LEDS_PIN   (PA4)
+#define BUZZER_PIN (PB1)
 
 static bool is_led_process, is_led_error_en;
 
@@ -27,8 +28,8 @@ static uint8_t buzzer_repeat_counter;
 static uint8_t buzzer_task;
 static bool buzzer_state;
 
-static const uint16_t beep_melody_durations[] = {500};
-static const uint16_t process_done_melody_durations[] = {1000, 800};
+static const uint16_t beep_melody_durations[] = {300};
+static const uint16_t process_done_melody_durations[] = {800, 800};
 static const uint16_t error_melody_durations[] = {200, 100, 200, 100, 200, 1000};
 
 static const buzzer_melody_t buzzer_melodyes[] = {
@@ -47,16 +48,8 @@ static void buzzer_dis(void);
 
 
 void indicators_init(void) {
-    gpio_config_pins(LEDS_BUZZER_PIN, GPIO_MODE_OUTPUT_PP, GPIO_PULL_NONE, GPIO_SPEED_HIGH, 0, true);
-
-    // TIM14_CH1
-    sysclk_enable_peripheral(TIM14);
-    TIM14->CCMR1 = 4 << TIM_CCMR1_OC1M_Pos; //  disable
-    TIM14->CCER = 1 << TIM_CCER_CC1E_Pos;
-    TIM14->PSC = 0;
-    TIM14->ARR = 6857;   // 7 KHz
-    TIM14->CCR1 = 6857 / 2;
-    TIM14->CR1 = TIM_CR1_CEN;
+    gpio_config_pins(LEDS_PIN, GPIO_MODE_OUTPUT_PP, GPIO_PULL_NONE, GPIO_SPEED_HIGH, 0, true);
+    gpio_config_pins(BUZZER_PIN, GPIO_MODE_OUTPUT_PP, GPIO_PULL_NONE, GPIO_SPEED_HIGH, 0, false);
 
     is_led_process = false;
     is_led_error_en = false;
@@ -150,14 +143,12 @@ static void buzzer_process(void) {
 
 
 static void buzzer_en(void) {
-    gpio_config_pins(LEDS_BUZZER_PIN, GPIO_MODE_ALT_FUNCTION_PP, GPIO_PULL_NONE, GPIO_SPEED_HIGH, 4, false);
-    TIM14->CCMR1 = 6 << TIM_CCMR1_OC1M_Pos;    // PWM mode 1 - Channel 1 is active as long as TIMx_CNT < TIMx_CCR1 else inactive
+    gpio_set_pins(BUZZER_PIN);
 }
 
 
 static void buzzer_dis(void) {
-    gpio_config_pins(LEDS_BUZZER_PIN, GPIO_MODE_OUTPUT_PP, GPIO_PULL_NONE, GPIO_SPEED_HIGH, 0, true);
-    TIM14->CCMR1 = 4 << TIM_CCMR1_OC1M_Pos;  // disable
+    gpio_reset_pins(BUZZER_PIN);
 }
 
 
@@ -166,21 +157,18 @@ static void led_process(void) {
     static bool is_led_en = false;
 
 
-    if (buzzer_process_state != BUZZER_STATE_IDLE) return;
-
-    
     if (is_led_error_en) {
         if (timer_triggered(led_animation_timer)) {
-            if (is_led_en) gpio_reset_pins(LEDS_BUZZER_PIN);
-            else gpio_set_pins(LEDS_BUZZER_PIN);
+            if (is_led_en) gpio_reset_pins(LEDS_PIN);
+            else gpio_set_pins(LEDS_PIN);
             is_led_en = !is_led_en;
             led_animation_timer = timer_start_ms(600);
         }
     }
     else if (is_led_process) {
-        gpio_set_pins(LEDS_BUZZER_PIN);
+        gpio_set_pins(LEDS_PIN);
     }
     else {
-        gpio_reset_pins(LEDS_BUZZER_PIN);
+        gpio_reset_pins(LEDS_PIN);
     }
 }

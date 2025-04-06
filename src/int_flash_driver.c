@@ -10,6 +10,7 @@
 static __ramfunc void flash_lock(void);
 static __ramfunc void flash_unlock(void);
 static __ramfunc bool flash_wait_operation_complete(void);
+static __ramfunc bool flash_write_word(uint32_t address, uint16_t word);
 
 
 
@@ -20,7 +21,7 @@ static __ramfunc bool flash_wait_operation_complete(void);
 /// @param  none
 /// @return true - success, false - fail
 //  ***************************************************************************
-bool flash_enable_protect(void) {
+bool int_flash_driver_enable_protect(void) {
     /*
     uint16_t* rdp_option_byte_address = (uint16_t*)OB_BASE;
     uint16_t rdp_option_byte_value = *rdp_option_byte_address;
@@ -89,15 +90,15 @@ bool flash_enable_protect(void) {
 
 //  ***************************************************************************
 /// @brief  Erase FLASH page
-/// @param  flash_address
+/// @param  address
 /// @return true - success, false - fail
 //  ***************************************************************************
-__ramfunc bool flash_erase_page(uint32_t flash_address) {
+__ramfunc bool int_flash_driver_erase_page(uint32_t address) {
     flash_unlock();
 
     // Erase page
     FLASH->CR |= FLASH_CR_PER;
-    FLASH->AR = flash_address;
+    FLASH->AR = address;
     FLASH->CR |= FLASH_CR_STRT;
 
     // Wait operation complete
@@ -110,70 +111,24 @@ __ramfunc bool flash_erase_page(uint32_t flash_address) {
 }
 
 
-//  ***************************************************************************
-/// @brief  Write word to FLASH
-/// @note   Write little endian format (swap MSB and LSB)
-/// @param  flash_address
-/// @param  data
-/// @return true - success, false - fail
-//  ***************************************************************************
-__ramfunc bool flash_write_word(uint32_t flash_address, uint16_t data) {
-    bool result;
-
-
-    flash_unlock();
-    uint16_t word = (data << 8) | (data >> 8);
-    // Write word
-    FLASH->CR |= FLASH_CR_PG;
-    *((uint16_t*)flash_address) = word;
-    // Wait operation complete
-    result = flash_wait_operation_complete();
-    FLASH->CR &= ~FLASH_CR_PG;
-    flash_lock();
-    if (!result) return false;
-    
-    // Check written data
-    uint8_t *pointer = (uint8_t*)flash_address;
-    uint16_t read_word = (pointer[1] << 8) | pointer[0];
-    
-    return read_word == word;
-}
-
-
-
-__ramfunc bool flash_write_bytes(uint32_t flash_address, const uint8_t *buffer, uint32_t size) {
+__ramfunc bool int_flash_driver_write_bytes(uint32_t address, const uint8_t *buffer, uint32_t size) {
     int32_t buff_index;
     uint16_t word;
 
 
+    if ((address & 0x01) || (size & 0x01)) return false;
+    
+
     buff_index = 0;
-    if (flash_address & 0x01) {
-        flash_address--;
-        buff_index = -1;
-    }
-
     while (size != 0) {
-        size--;
-        if (buff_index == -1) {
-            word = 0xFF00;
-            word |= buffer[0];
-        }
-        else if (size == 0) {
-            word = buffer[buff_index];
-            word = word << 8;
-            word |= 0xFF;
-        }
-        else {
-            word = buffer[buff_index];
-            word = word << 8;
-            word |= buffer[buff_index + 1];
-            size--;
-            buff_index++;
-        }
-        buff_index++;
+        word = buffer[buff_index + 1];
+        word = word << 8;
+        word |= buffer[buff_index];
+        size -= 2;
+        buff_index += 2;
 
-        if (!flash_write_word(flash_address, word)) return false;
-        flash_address += 2;
+        if (!flash_write_word(address, word)) return false;
+        address += 2;
     }
 
     return true;
@@ -182,49 +137,16 @@ __ramfunc bool flash_write_bytes(uint32_t flash_address, const uint8_t *buffer, 
 
 //  ***************************************************************************
 /// @brief  Read data from FLASH
-/// @param  flash_address
+/// @param  address
 /// @param  buffer
 /// @param  size
 /// @retval buffer
-/// @return none
+/// @return true - success, false - fail
 //  ***************************************************************************
-void flash_read_bytes(uint32_t flash_address, uint8_t *buffer, uint32_t size) {
-    memcpy(buffer, (uint8_t*)(flash_address), size);
-}
-
-
-//  ***************************************************************************
-/// @brief  Read single byte from FLASH
-/// @param  flash_address
-/// @return byte value
-//  ***************************************************************************
-uint8_t flash_read_byte(uint32_t flash_address) {
-    uint8_t *pointer = (uint8_t*)flash_address;
-    return pointer[0];
-}
-
-
-//  ***************************************************************************
-/// @brief  Read single word from FLASH
-/// @note   Value returned in little endian format
-/// @param  flash_address
-/// @return word value
-//  ***************************************************************************
-uint16_t flash_read_word_le(uint32_t flash_address) {
-    uint8_t *pointer = (uint8_t*)flash_address;
-    return (pointer[0] << 8) | pointer[1];
-}
-
-
-//  ***************************************************************************
-/// @brief  Read single word from FLASH
-/// @note   Value returned in big endian format
-/// @param  flash_address
-/// @return word value
-//  ***************************************************************************
-uint16_t flash_read_word_be(uint32_t flash_address) {
-    uint8_t *pointer = (uint8_t*)flash_address;
-    return (pointer[1] << 8) | pointer[0];
+bool int_flash_driver_read_bytes(uint32_t address, uint8_t *buffer, uint32_t size) {
+    if ((address & 0x01) || (size & 0x01)) return false;
+    memcpy(buffer, (uint8_t*)(address), size);
+    return true;
 }
 
 
@@ -282,4 +204,30 @@ static __ramfunc bool flash_wait_operation_complete(void) {
     // Reset all result bits
     FLASH->SR |= FLASH_SR_EOP | FLASH_SR_WRPERR | FLASH_SR_PGERR;
     return true;
+}
+
+
+//  ***************************************************************************
+/// @brief  Write word to FLASH
+/// @param  address
+/// @param  word
+/// @return true - success, false - fail
+//  ***************************************************************************
+static __ramfunc bool flash_write_word(uint32_t address, uint16_t word) {
+    bool result;
+
+
+    flash_unlock();
+    // Write word
+    FLASH->CR |= FLASH_CR_PG;
+    *((uint16_t*)address) = word;
+    // Wait operation complete
+    result = flash_wait_operation_complete();
+    FLASH->CR &= ~FLASH_CR_PG;
+    flash_lock();
+    if (!result) return false;
+    
+    // Check written data
+    uint16_t *read_word = (uint16_t*)address;
+    return *read_word == word;
 }

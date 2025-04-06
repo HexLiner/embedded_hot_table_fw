@@ -8,13 +8,14 @@
 
 #define ADC_VREFINT_CAL_ADDRESS (0x1FFFF7BA)
 #define ADC_VDDA_CHARAC_MV      (3300)
-#define ADC_TEMPERATURE_CHANNEL (16)
-#define ADC_VREFINT_CHANNEL     (17)
 
-static uint16_t int_adc_ref_mv;
-static int_adc_channel_t *int_adc_channels[18];
-static uint32_t active_channel, active_channels_qty;
-static int_adc_channel_t int_adc_channel_vrefint_channel;
+#define ADC_TC_CAL1_ADDRESS     (0x1FFFF7B8)
+#define ADC_TS_CAL1_TEMP        (30)
+#define ADC_TC_AVG_SLOPE_UV_C   (4300)
+#define ADC_TC_AVG_SLOPE_CODE   (((uint32_t)ADC_TC_AVG_SLOPE_UV_C * 4096) / 3300000)
+
+static int_adc_channel_t *active_channels[INT_ADC_MAX_CHANNELS_QTY] = {NULL, };
+static uint32_t active_channel_index, active_channels_qty;
 
 
 static bool int_adc_calibration(void);
@@ -25,9 +26,6 @@ static void int_adc_disable(void);
 
 
 void int_adc_init(int_adc_clk_src_t clk_src, int_adc_sample_rate_t smp_rate) {
-    uint32_t i;
-
-
     sysclk_enable_peripheral(ADC1);
 
     ADC1->CFGR1 = (1 << ADC_CFGR1_CONT_Pos)    |   // Mode: 1 - Continuous conversion mode
@@ -36,20 +34,13 @@ void int_adc_init(int_adc_clk_src_t clk_src, int_adc_sample_rate_t smp_rate) {
                   (0 << ADC_CFGR1_DMAEN_Pos);
     ADC1->CFGR2 = clk_src << ADC_CFGR2_CKMODE_Pos;
     ADC1->SMPR = smp_rate << ADC_SMPR_SMP_Pos;
-    ADC1_COMMON->CCR = (0 << ADC_CCR_TSEN_Pos) |
-                       (1 << ADC_CCR_VREFEN_Pos);
-
     ADC1->CHSELR = 0;
-    for (i = 0; i < 18; i++) int_adc_channels[i] = NULL;
-    active_channel = 0;
+    ADC1_COMMON->CCR = 0;
+
+    active_channel_index = 0;
     active_channels_qty = 0;
 
-    int_adc_channel_vrefint_channel.channel_number = ADC_VREFINT_CHANNEL;
-    int_adc_channel_vrefint_channel.samples_qty = 100;
-    int_adc_add_channel(&int_adc_channel_vrefint_channel);
-
     int_adc_calibration();
-    int_adc_ref_mv = ADC_VDDA_CHARAC_MV;   ////
     int_adc_enable();
 
     // Enable ADC IRQ
@@ -63,21 +54,28 @@ void int_adc_add_channel(int_adc_channel_t *int_adc_channel) {
     int32_t i;
 
     
-    if ((ADC1->CR & ADC_CR_ADSTART) != 0) return;   // ADC must be stopped!
-    if (int_adc_channels[17] != NULL) return;    // busy
+    if ((ADC1->CR & ADC_CR_ADSTART) != 0) ERROR_FATAL(int_adc_add_channel, __LINE__);   // ADC must be stopped!
+    if (active_channels[INT_ADC_MAX_CHANNELS_QTY - 1] != NULL) ERROR_FATAL(int_adc_add_channel, __LINE__);
 
     // sort from min to max
-    for (i = 17; i >= 0; i--) {
-        if (int_adc_channels[i] == NULL) continue;
-        if (int_adc_channels[i]->channel_number > int_adc_channel->channel_number) {
-            int_adc_channels[i + 1] = int_adc_channels[i];
+    for (i = (INT_ADC_MAX_CHANNELS_QTY - 1); i >= 0; i--) {
+        if (active_channels[i] == NULL) continue;
+        if (active_channels[i]->channel_number > int_adc_channel->channel_number) {
+            active_channels[i + 1] = active_channels[i];
         }
         else {
-            int_adc_channels[i] = int_adc_channel;
+            active_channels[i] = int_adc_channel;
             break;
         }
     }
-    if (i == -1) int_adc_channels[0] = int_adc_channel;
+    if (i == -1) active_channels[0] = int_adc_channel;
+
+    if (int_adc_channel->channel_number == INT_ADC_TEMPERATURE_CHANNEL) {
+        ADC1_COMMON->CCR |= ADC_CCR_TSEN;
+    }
+    if (int_adc_channel->channel_number == INT_ADC_VREFINT_CHANNEL) {
+        ADC1_COMMON->CCR |= ADC_CCR_VREFEN;
+    }
 
     int_adc_channel->buffer = 0;
     int_adc_channel->samples_cnt = 0;
@@ -86,7 +84,35 @@ void int_adc_add_channel(int_adc_channel_t *int_adc_channel) {
 }
 
 
+uint16_t int_adc_calc_vdda(uint16_t vref_data_raw) {
+    const uint16_t *vrefint_cal = (uint16_t*)ADC_VREFINT_CAL_ADDRESS;
+    uint16_t vdda_mv;
+
+    if (vref_data_raw == 0) return 0;
+    vdda_mv = ((uint32_t)*vrefint_cal * ADC_VDDA_CHARAC_MV) / vref_data_raw;
+    return vdda_mv;
+}
+
+
+uint16_t int_adc_calc_tc(uint16_t tc_data_raw, uint16_t vdda_mv) {
+    const uint16_t *tc_cal1 = (uint16_t*)ADC_TC_CAL1_ADDRESS;
+    int32_t temperature_c;
+
+
+    // Temperature_C = ((Sense_DATA - TS_CAL1) / Avg_Slope_Code) + TS_CAL1_TEMP
+    // Avg_Slope_Code =  Avg_Slope * 4096 / 3300
+    // Sense_DATA = TS_DATA * VDDA / 3.3
+    
+    temperature_c = ((uint32_t)tc_data_raw * vdda_mv) / 3300;   // Sense_DATA
+    temperature_c -= *tc_cal1;
+    temperature_c /= ADC_TC_AVG_SLOPE_CODE;
+    temperature_c += ADC_TS_CAL1_TEMP;
+    return temperature_c;
+}
+
+
 void int_adc_start_continuous_converts(void) {
+    active_channel_index = 0;
     ADC1->ISR |= (ADC_ISR_EOS | ADC_ISR_EOC);   // Clear flags
     ADC1->IER |= (ADC_IER_EOSIE | ADC_IER_EOCIE);
     ADC1->CR |= ADC_CR_ADSTART;
@@ -110,12 +136,12 @@ bool int_adc_is_raw_data_ready(int_adc_channel_t *int_adc_channel, uint16_t *dat
 }
 
 
-bool int_adc_is_voltage_data_ready(int_adc_channel_t *int_adc_channel, uint16_t *data_mv) {
+bool int_adc_is_voltage_data_ready(int_adc_channel_t *int_adc_channel, uint16_t *data_mv, uint16_t vdda_mv) {
     uint16_t data_raw;
 
 
     if (!int_adc_is_raw_data_ready(int_adc_channel, &data_raw)) return false;
-    *data_mv = ((uint32_t)data_raw * int_adc_ref_mv) / 4095;
+    *data_mv = ((uint32_t)data_raw * vdda_mv) / 4095;
 
     return true;
 }
@@ -164,24 +190,22 @@ void ADC1_IRQHandler(void);
 void ADC1_IRQHandler(void) {
     uint32_t status;
     volatile uint16_t adc_dr_skip;
-    const uint16_t *vrefint_cal = (uint16_t*)ADC_VREFINT_CAL_ADDRESS;
 
 
     status = ADC1->ISR;
     if (status & ADC_ISR_EOC) {
-        if (int_adc_channels[active_channel]->samples_cnt < int_adc_channels[active_channel]->samples_qty) {
-            int_adc_channels[active_channel]->buffer += ADC1->DR;
-            int_adc_channels[active_channel]->samples_cnt++;
+        if (active_channels[active_channel_index]->samples_cnt < active_channels[active_channel_index]->samples_qty) {
+            active_channels[active_channel_index]->buffer += ADC1->DR;
+            active_channels[active_channel_index]->samples_cnt++;
         }
-        active_channel++;
-        if (active_channel >= active_channels_qty) active_channel = 0;
-
-        if (int_adc_is_raw_data_ready(&int_adc_channel_vrefint_channel, &int_adc_ref_mv)) {
-            int_adc_ref_mv = ((uint32_t)*vrefint_cal * ADC_VDDA_CHARAC_MV) / int_adc_ref_mv;
+        else {
+            adc_dr_skip = ADC1->DR;
         }
+        active_channel_index++;
+        if (active_channel_index >= active_channels_qty) active_channel_index = 0;
     }
     if (status & ADC_ISR_EOS) {
-        active_channel = 0;
+        active_channel_index = 0;
     }
 
     ADC1->ISR |= (ADC_ISR_EOS | ADC_ISR_EOC);   // Clear flags

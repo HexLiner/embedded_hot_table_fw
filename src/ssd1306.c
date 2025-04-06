@@ -140,7 +140,7 @@ static const uint8_t fount[][5] = {
 
 static i2c_transaction_t transaction;
 static uint32_t i2c_timeout_int;
-static handle_t i2c_handle_int;
+static i2c_t *i2c_int;
 
 static void ssd1306_send_cmd(uint8_t command);
 static void ssd1306_i2c_write_blocking(const uint8_t *data, uint8_t data_size);
@@ -149,7 +149,7 @@ static void dig_to_string(uint16_t digit, bool is_visible_zeros, char *string);
 
 
 
-void ssd1306_init(handle_t i2c_handle, uint8_t i2c_addr, uint32_t i2c_timeout) {
+void ssd1306_init(i2c_t *i2c, uint8_t i2c_addr, uint32_t i2c_timeout) {
     uint8_t i;
     // this is a list of setup commands for the display
     const uint8_t setup[] = {
@@ -191,7 +191,7 @@ void ssd1306_init(handle_t i2c_handle, uint8_t i2c_addr, uint32_t i2c_timeout) {
         SSD1306_DISPLAY_ON
     };
 
-    i2c_handle_int = i2c_handle;
+    i2c_int = i2c;
     i2c_timeout_int = i2c_timeout;
 
     transaction.address = i2c_addr;
@@ -258,14 +258,15 @@ void ssd1306_print_digit(uint16_t digit, uint8_t digit_max_len, bool is_visible_
 
 
     dig_to_string(digit, is_visible_zeros, lcd_string);
-    ssd1306_print_str(&lcd_string[5 - digit_max_len], ssd1306_fount_mode, x, y);
+    ssd1306_print_str(&lcd_string[5 - digit_max_len], 0, ssd1306_fount_mode, x, y);
 }
 
 
 // k = 1 -> 21 x 4 simw  (0, 6, 12, 18, 24, 30, 36, 42, 48, 54, 60, 66, 72, 78, 84, 90, 96, 102, 108, 114, 120)
 // k = 2 -> 10 x 2 simw  (0, 12, 24, 36, 48, 60, 72, 84, 96, 108)
-void ssd1306_print_str(const char *str, ssd1306_fount_mode_t ssd1306_fount_mode, uint8_t x, uint8_t y) {
+void ssd1306_print_str(const char *str, uint8_t min_str_size, ssd1306_fount_mode_t ssd1306_fount_mode, uint8_t x, uint8_t y) {
     uint8_t curr_x;
+    uint8_t simw_qty;
 
 
     curr_x = x;
@@ -273,6 +274,12 @@ void ssd1306_print_str(const char *str, ssd1306_fount_mode_t ssd1306_fount_mode,
         ssd1306_print_simw(*str, ssd1306_fount_mode, curr_x, y);
         curr_x += (SSD1306_SIMW_W * (uint8_t)ssd1306_fount_mode) + (uint8_t)ssd1306_fount_mode;
         str++;
+        simw_qty++;
+    }
+    while(simw_qty < min_str_size) {
+        ssd1306_print_simw(' ', ssd1306_fount_mode, curr_x, y);
+        curr_x += (SSD1306_SIMW_W * (uint8_t)ssd1306_fount_mode) + (uint8_t)ssd1306_fount_mode;
+        simw_qty++;
     }
 }
 
@@ -356,7 +363,7 @@ static void ssd1306_send_cmd(uint8_t command) {
 static void ssd1306_i2c_write_blocking(const uint8_t *data, uint8_t data_size) {
     transaction.tx_data = data;
     transaction.tx_size = data_size;
-    i2c_transfer(i2c_handle_int, &transaction, 5, i2c_timeout_int);
+    i2c_transfer(i2c_int, &transaction, 5, i2c_timeout_int);
 }
 
 

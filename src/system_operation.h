@@ -8,16 +8,19 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <stdlib.h>
+#include <stdio.h>
 #include "common/error.h"
 #include "hal/gpio/gpio.h"
 #include "hal/systimer/systimer.h"
-#include "int_flash_driver.h"
 #include "button_driver.h"
 #include "indicators_driver.h"
 #include "gui.h"
 #include "profiles.h"
 #include "outputs_driver.h"
 #include "error_handling.h"
+
+
+extern bool is_cli_dbg_mode;
 
 
 extern void system_operation_init(void);

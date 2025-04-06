@@ -23,11 +23,8 @@
 #define SCL_IS_DOWN   !(i2c_scl_port->IDR & (1 << i2c_scl_pin))
 
 
-typedef struct {
-    gpio_pin_t scl_pin;
-    gpio_pin_t sda_pin;
-} i2c_internal_t;
-
+static i2c_t *i2cs[I2C_MAX_QTY];
+static uint8_t i2cs_qty = 0;
 
 static timer_t i2c_timeout_timer;
 static GPIO_TypeDef *i2c_sda_port;
@@ -36,8 +33,8 @@ static GPIO_TypeDef *i2c_scl_port;
 static uint8_t i2c_scl_pin;
 
 
-static void i2c_enable(i2c_internal_t *i2c);
-static void i2c_disable(i2c_internal_t *i2c);
+static void i2c_enable(i2c_t *i2c);
+static void i2c_disable(i2c_t *i2c);
 static bool i2c_start(void);
 static void i2c_stop(void);
 static bool i2c_write_byte(uint8_t data);
@@ -50,54 +47,29 @@ static void i2c_clock_delay(void);
 
 //  ***************************************************************************
 /// @brief   Init I2C
-/// @param   handle
-/// @param   hwid
-/// @param   i2c_settings_t
-/// @retval  handle
+/// @param   i2c
+/// @retval  i2c
 /// @return  @ref error_t
 //  ***************************************************************************
-error_t i2c_init(handle_t *handle, void *hwid, const i2c_settings_t *settings) {
-    i2c_internal_t *i2c;
+error_t i2c_init(i2c_t *i2c) {
+    if (i2cs_qty >= I2C_MAX_QTY) ERROR_FATAL(i2c_init, __LINE__);
+
+    i2cs[i2cs_qty] = i2c;
+    i2cs_qty++;
     
-
-    *handle = malloc(sizeof(i2c_internal_t));
-    if (*handle == NULL) return E_SOFTWARE_FLAG | E_SOURCE_I2C | E_OUT_OF_MEMORY;
-    i2c = (i2c_internal_t*)*handle;
-    i2c->scl_pin = settings->scl_pin;
-    i2c->sda_pin = settings->sda_pin;
-
     i2c_enable(i2c);
-    return i2c_clock_delay_init(settings->speed_hz);
-}
-
-
-//  ***************************************************************************
-/// @brief   Deinitializes I2C software unit and hardware peripheral
-/// @param   handle - I2C handle
-/// @return  @ref error_t
-/// @details This function includes disabling of pins alternate functions, I2C clocks, I2C peripheral and interrupts
-//  ***************************************************************************
-error_t i2c_deinit(handle_t handle) {
-    i2c_internal_t *i2c;
-    i2c = (i2c_internal_t*)handle;
-    
-    if (i2c == NULL) return E_SOFTWARE_FLAG | E_SOURCE_I2C | E_NO_DEVICE;
-
-    i2c_disable(i2c);
-    free(i2c);
-
-    return E_OK;
+    return i2c_clock_delay_init(i2c->speed_hz);
 }
 
 
 //  ***************************************************************************
 /// @brief   Starts processing of I2C transaction (asynchronous interface)
-/// @param   handle      - pointer to I2C handle
-/// @param   transaction - pointer to @ref i2c_transaction_t
+/// @param   i2c
+/// @param   transaction
 /// @return  @ref error_t
 /// @details Transaction will be processed in interrupts
 //  ***************************************************************************
-error_t i2c_transfer_begin(handle_t handle, i2c_transaction_t *transaction) {
+error_t i2c_transfer_begin(i2c_t *i2c, i2c_transaction_t *transaction) {
     // Unsupported !
     ERROR_FATAL(i2c_transfer_begin, __LINE__);
     return E_CANCELLED;
@@ -106,12 +78,12 @@ error_t i2c_transfer_begin(handle_t handle, i2c_transaction_t *transaction) {
 
 //  ***************************************************************************
 /// @brief   Checks transaction processing status (asynchronous interface)
-/// @param   handle           - pointer to I2C handle
-/// @param   transaction      - pointer to @ref i2c_transaction_t
-/// @param   stop_transaction - transaction stop request
+/// @param   i2c
+/// @param   transaction
+/// @param   stop_transaction
 /// @return  @ref error_t
 //  ***************************************************************************
-error_t i2c_transfer_end(handle_t handle, i2c_transaction_t *transaction, bool stop_transaction) {
+error_t i2c_transfer_end(i2c_t *i2c, i2c_transaction_t *transaction, bool stop_transaction) {
     // Unsupported !
     ERROR_FATAL(i2c_transfer_begin, __LINE__);
     return E_CANCELLED;
@@ -120,13 +92,13 @@ error_t i2c_transfer_end(handle_t handle, i2c_transaction_t *transaction, bool s
 
 //  ***************************************************************************
 /// @brief   Terminates processing of transaction (asynchronous interface)
-/// @param   handle      - pointer to I2C handle
-/// @param   transaction - pointer to @ref i2c_transaction_t
+/// @param   i2c
+/// @param   transaction
 /// @return  @ref error_t
 /// @details This function MUST be called if transaction timeout is expired \n
 ///          Transaction processing will be terminated, I2C peripheral will be reset
 //  ***************************************************************************
-error_t i2c_transfer_terminate(handle_t handle, i2c_transaction_t *transaction) {
+error_t i2c_transfer_terminate(i2c_t *i2c, i2c_transaction_t *transaction) {
     // Unsupported !
     ERROR_FATAL(i2c_transfer_begin, __LINE__);
     return E_CANCELLED;
@@ -135,22 +107,17 @@ error_t i2c_transfer_terminate(handle_t handle, i2c_transaction_t *transaction) 
 
 //  ***************************************************************************
 /// @brief   Performs full transaction processing (synchronous interface)
-/// @param   handle      - pointer to I2C handle
-/// @param   transaction - pointer to @ref i2c_transaction_t
+/// @param   i2c
+/// @param   transaction
 /// @param   retries     - number of retries
 /// @param   timeout_ms  - operation timeout (for all retries, not for each one)
 /// @return  @ref error_t
 //  ***************************************************************************
-error_t i2c_transfer(handle_t handle, i2c_transaction_t *transaction, uint32_t retries, uint32_t timeout_ms) {
-    i2c_internal_t *i2c;
+error_t i2c_transfer(i2c_t *i2c, i2c_transaction_t *transaction, uint32_t retries, uint32_t timeout_ms) {
     error_t result;
     uint32_t retry;
     uint32_t i;
     bool is_rx_only = true;
-
-
-    i2c = (i2c_internal_t*)handle;
-    if (i2c == NULL) return E_SOFTWARE_FLAG | E_SOURCE_I2C | E_NO_DEVICE;
 
 
     i2c_timeout_timer = timer_start_ms(timeout_ms);
@@ -195,12 +162,12 @@ error_t i2c_transfer(handle_t handle, i2c_transaction_t *transaction, uint32_t r
 
 //  ***************************************************************************
 /// @brief  Force I2C clocking when SDA stuck low
-/// @param  i2c - pointer to i2c internal structure
+/// @param  i2c
 /// @return @ref error_t
 /// @note   That function used when slave occupied SDA:
 /// @note   i2c_transfer_end() returned E_I2C_ETX_SLAVE_ERROR
 //  ***************************************************************************
-error_t i2c_bus_clear(handle_t handle) {
+error_t i2c_bus_clear(i2c_t *i2c) {
     /*
     i2c_internal_t *i2c;
     uint32_t       us_period;
@@ -248,10 +215,10 @@ error_t i2c_bus_clear(handle_t handle) {
 
 //  ***************************************************************************
 /// @brief   Turn on specified I2C module
-/// @param   i2c - pointer to i2c internal structure
+/// @param   i2c
 /// @return  none
 //  ***************************************************************************
-static void i2c_enable(i2c_internal_t *i2c) {
+static void i2c_enable(i2c_t *i2c) {
     sysclk_enable_peripheral(gpio_get_peripheral(i2c->scl_pin));
     sysclk_enable_peripheral(gpio_get_peripheral(i2c->sda_pin));
 
@@ -262,10 +229,10 @@ static void i2c_enable(i2c_internal_t *i2c) {
 
 //  ***************************************************************************
 /// @brief   Turn off specified I2C module
-/// @param   i2c - pointer to i2c internal structure
+/// @param   i2c
 /// @return  none
 //  ***************************************************************************
-static void i2c_disable(i2c_internal_t *i2c) {
+static void i2c_disable(i2c_t *i2c) {
     gpio_config_pins(i2c->scl_pin, GPIO_MODE_INPUT, GPIO_PULL_NONE, GPIO_SPEED_LOW, 0, false);
     gpio_config_pins(i2c->sda_pin, GPIO_MODE_INPUT, GPIO_PULL_NONE, GPIO_SPEED_LOW, 0, false);
 }

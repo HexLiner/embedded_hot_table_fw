@@ -8,14 +8,13 @@
 #define SSD1306_SLAVE_ADDR (0b01111000)  // or 0b01111010  - 0 1 1 1 1 0 SA0 R/W# 
 #define DISPLAY_STANDBY_TIMEOUT_MS (60 * 1000)
 
-static handle_t i2c_handle;
-static i2c_settings_t i2c_settings = {
-    .speed_hz = 1000000,
-    .scl_pin = PA1,
-    .sda_pin = PA0
+static i2c_t i2c = {
+    .peripheral = NULL,
+    .speed_hz  = 1000000,
+    .scl_pin   = PA1,
+    .sda_pin   = PA0
 };
 
-const char *gui_menu_empty_str = "                ";
 static bool is_profiles_menu_screen;
 static uint8_t process_time_h_prev, process_time_m_prev, process_time_s_prev;
 static timer_t standby_timer;
@@ -27,8 +26,8 @@ static void gui_print_center_msg_int(const uint8_t *msg, ssd1306_fount_mode_t ss
 
 
 void gui_init(void) {
-    i2c_init(&i2c_handle, NULL, &i2c_settings);
-    ssd1306_init(i2c_handle, SSD1306_SLAVE_ADDR, 1000);
+    i2c_init(&i2c);
+    ssd1306_init(&i2c, SSD1306_SLAVE_ADDR, 1000);
     ssd1306_clear();
 
     is_profiles_menu_screen = false;
@@ -60,6 +59,7 @@ void gui_clear_screen(void) {
 
 
 void gui_print_center_msg(const uint8_t *msg) {
+    ssd1306_clear();
     gui_print_center_msg_int(msg, SSD1306_FOUNT_MODE_K2, 8);
     is_profiles_menu_screen = false;
 }
@@ -74,12 +74,12 @@ void gui_print_profiles_menu_screen(uint8_t selected_item) {
     if (selected_item >= active_profiles_qty) selected_item = 0;
 
 
-    if (selected_item > 0) ssd1306_print_str(profiles[selected_item - 1].name, SSD1306_FOUNT_MODE_K1, 12, 0);
-    else ssd1306_print_str(gui_menu_empty_str, SSD1306_FOUNT_MODE_K1, 12, 0);
+    if (selected_item > 0) ssd1306_print_str(profiles[selected_item - 1].name, RG_PROFILE_NAME_SIZE, SSD1306_FOUNT_MODE_K1, 12, 0);
+    else ssd1306_print_str("", RG_PROFILE_NAME_SIZE, SSD1306_FOUNT_MODE_K1, 12, 0);
     for (i = 0; i < 3; i++) {
         y = selected_item + i;
-        if (y < active_profiles_qty) ssd1306_print_str(profiles[y].name, SSD1306_FOUNT_MODE_K1, 12, (8 * (i + 1)));
-        else ssd1306_print_str(gui_menu_empty_str, SSD1306_FOUNT_MODE_K1, 12, (8 * (i + 1)));
+        if (y < active_profiles_qty) ssd1306_print_str(profiles[y].name, RG_PROFILE_NAME_SIZE, SSD1306_FOUNT_MODE_K1, 12, (8 * (i + 1)));
+        else ssd1306_print_str("", RG_PROFILE_NAME_SIZE, SSD1306_FOUNT_MODE_K1, 12, (8 * (i + 1)));
     }
     ssd1306_print_simw('>', SSD1306_FOUNT_MODE_K1, 0, 8);
     ssd1306_print_simw(' ', SSD1306_FOUNT_MODE_K1, 6, 8);
@@ -125,8 +125,9 @@ void gui_update_process_screen(uint8_t temperature_curr_c, uint32_t process_time
 
 
 void gui_print_error(const uint8_t *error_msg) {
-    gui_print_center_msg_int("ERROR", SSD1306_FOUNT_MODE_K2, 2);
-    gui_print_center_msg_int(error_msg, SSD1306_FOUNT_MODE_K1, 22);
+    ssd1306_clear();
+    gui_print_center_msg_int("ERROR", SSD1306_FOUNT_MODE_K2, 0);
+    gui_print_center_msg_int(error_msg, SSD1306_FOUNT_MODE_K2, 16);
     is_profiles_menu_screen = false;
 }
 
@@ -143,6 +144,5 @@ static void gui_print_center_msg_int(const uint8_t *msg, ssd1306_fount_mode_t ss
     x = SSD1306_W - msg_size;
     x = x / 2;
 
-    ssd1306_clear();
-    ssd1306_print_str(msg, ssd1306_fount_mode, x, y);
+    ssd1306_print_str(msg, 0, ssd1306_fount_mode, x, y);
 }

@@ -24,7 +24,8 @@
         "int_adc_driver.h": "c",
         "lib_base.h": "c",
         "button_driver.h": "c",
-        "error_handling.h": "c"
+        "error_handling.h": "c",
+        "irq_handlers.h": "c"
     },
     "C_Cpp.dimInactiveRegions": false
 }

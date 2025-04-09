@@ -58,6 +58,11 @@ error_t usb_cdc_init(void) {
 }
 
 
+void usb_cdc_handler(void) {
+    HAL_PCD_IRQHandler(&hpcd);
+}
+
+
 bool usb_cdc_is_usb_connected(void) {
     return true;
 }
@@ -180,13 +185,4 @@ static int8_t usbd_cdc_fops_receive(uint8_t *Buf, uint32_t *Len) {
     usb_cdc_is_data_received = true;
 
     return USBD_OK;
-}
-
-
-
-
-
-void USB_IRQHandler(void);
-void USB_IRQHandler(void) {
-    HAL_PCD_IRQHandler(&hpcd);
 }

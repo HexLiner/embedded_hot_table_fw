@@ -12,9 +12,6 @@ static volatile uint64_t systime_ms = 0;
 static systimer_callback callback = NULL;
 
 
-static void systimer_isr(void);
-
-
 
 
 //  ***************************************************************************
@@ -35,23 +32,23 @@ void systimer_init(void) {
 
 
 //  ***************************************************************************
+/// @brief  System timer interrupt handler
+/// @param  none
+/// @return none
+//  ***************************************************************************
+void systimer_handler(void) {
+    systime_ms++;
+    if (callback != NULL) callback(systime_ms);
+}
+
+
+//  ***************************************************************************
 /// @brief  Set callback funtcion for systimer tick
 /// @note   Callback will be called once per systimer tick (1 kHz)
 /// @param  callback_function - callback function, can be NULL
 //  ***************************************************************************
 void systimer_set_callback(systimer_callback callback_function) {
     callback = callback_function;
-}
-
-
-//  ***************************************************************************
-/// @brief  System timer interrupt handler
-/// @param  none
-/// @return none
-//  ***************************************************************************
-static void systimer_isr(void) {
-    systime_ms++;
-    if (callback != NULL) callback(systime_ms);
 }
 
 
@@ -111,13 +108,4 @@ timer_t timer_restart_ms(timer_t timer, uint32_t time_ms) {
 //  ***************************************************************************
 bool timer_triggered(timer_t timer) {
     return (systime_ms >= timer);
-}
-
-
-
-
-void SysTick_Handler(void);
-
-void SysTick_Handler(void) {
-    systimer_isr();
 }

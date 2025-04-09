@@ -1,6 +1,5 @@
 //  ***************************************************************************
 /// @file    lib_base.h
-/// @author  Techart Micro Systems (ES)
 /// @brief   Base header for library modules
 //  ***************************************************************************
 #ifndef _LIB_BASE_H_

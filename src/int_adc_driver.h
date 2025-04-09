@@ -14,7 +14,7 @@
 #include "hal/systimer/systimer.h"
 
 
-#define INT_ADC_MAX_CHANNELS_QTY (3)
+#define INT_ADC_MAX_CHANNELS_QTY    (3)
 
 #define INT_ADC_TEMPERATURE_CHANNEL (16)
 #define INT_ADC_VREFINT_CHANNEL     (17)
@@ -48,6 +48,8 @@ typedef enum {
 
 
 extern void int_adc_init(int_adc_clk_src_t clk_src, int_adc_sample_rate_t smp_rate);
+extern void int_adc_handler(void);
+
 extern void int_adc_add_channel(int_adc_channel_t *int_adc_channel);
 extern uint16_t int_adc_calc_vdda(uint16_t vref_data_raw);
 extern uint16_t int_adc_calc_tc(uint16_t tc_data_raw, uint16_t vdda_mv);

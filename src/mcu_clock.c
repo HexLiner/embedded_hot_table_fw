@@ -1,6 +1,5 @@
 //  ***************************************************************************
 /// @file    mcu_clock.c
-/// @author  Techart Micro Systems (DM)
 //  ***************************************************************************
 
 #include "mcu_clock.h"
@@ -21,6 +20,22 @@ static const sysclk_extcfg_t sysclk_extcfg = {
 };
 
 
+
+
+//  ***************************************************************************
+/// @brief      HSE error handler
+/// @param      none
+/// @return     none
+//  ***************************************************************************
+void mcu_clock_hse_error_handler(void) {
+    // HSE error interrupt
+    if (RCC->CIR & RCC_CIR_CSSF) {
+        eh_set_fail_ext_oscillator_error();
+        mcu_clock_set_normal_config();
+    }
+
+    RCC->CIR = 0xFFFF;   // Clear flags
+}
 
 
 //  ***************************************************************************
@@ -130,7 +145,6 @@ error_t mcu_clock_set_normal_config(void) {
                   (UART1_SRC_APB << RCC_CFGR3_USART1SW_Pos) |
                   (USB_SRC_PLLCLK << RCC_CFGR3_USBSW_Pos);
 
-    NVIC_EnableIRQ(RCC_IRQn);
 
     return E_OK;
 }
@@ -184,19 +198,4 @@ void mcu_clock_set_safe_config() {
     RCC->CR &= ~(RCC_CR_PLLON_Msk | RCC_CR_HSEON_Msk);
     // Clock security system disable
     RCC->CR &= RCC_CR_CSSON;
-}
-
-
-
-
-
-void RCC_IRQHandler(void);
-void RCC_IRQHandler(void) {
-    // HSE error interrupt
-    if (RCC->CIR & RCC_CIR_CSSF) {
-        eh_set_fail_ext_oscillator_error();
-        mcu_clock_set_normal_config();
-    }
-
-    RCC->CIR = 0xFFFF;   // Clear flags
 }

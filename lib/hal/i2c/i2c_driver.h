@@ -11,9 +11,6 @@
 #include "hal/gpio/gpio.h"
 
 
-#define I2C_MAX_QTY (1)
-
-
 typedef struct {
     // Public
     peripheral_t peripheral;
@@ -33,6 +30,7 @@ typedef struct {
 
 
 extern error_t i2c_init(i2c_t *i2c);
+extern void i2c_handler(i2c_t *i2c);
 
 extern error_t i2c_transfer_begin(i2c_t *i2c, i2c_transaction_t *transaction);
 extern error_t i2c_transfer_end(i2c_t *i2c, i2c_transaction_t *transaction, bool stop_transaction);

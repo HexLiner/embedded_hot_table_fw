@@ -12,6 +12,8 @@
 
 
 extern error_t usb_cdc_init(void);
+extern void usb_cdc_handler(void);
+
 extern bool usb_cdc_is_usb_connected(void);
 extern error_t usb_cdc_send_data(const uint8_t *data, uint32_t size, uint32_t *max_size);
 extern error_t usb_cdc_receive_data(uint8_t *data, uint32_t *size, uint32_t max_size);

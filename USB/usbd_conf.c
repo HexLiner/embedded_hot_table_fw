@@ -47,12 +47,6 @@ void HAL_PCD_MspInit(PCD_HandleTypeDef *hpcd)
 
   /* Enable USB FS Clock */
   sysclk_enable_peripheral(USB);
-
-  /* Set USB FS Interrupt priority */
-  NVIC_SetPriority(USB_IRQn, 1);   ////
-
-  /* Enable USB FS Interrupt */
-  NVIC_EnableIRQ(USB_IRQn);
 }
 
 /**

@@ -166,8 +166,10 @@ static void cli_rx_process(void) {
                     }
                 }
                 else if (rx_raw_buff[i] == '\x7F') {    // 7F - Backspace code
-                    ring_buff_write(&tx_ring_buff, rx_raw_buff[i]);    // echo
-                    if ((rx_buff_index > 0) && !is_rx_overflow) rx_buff_index--;  // delete last symbol
+                    if ((rx_buff_index > 0) && !is_rx_overflow) {
+                        ring_buff_write(&tx_ring_buff, rx_raw_buff[i]);    // echo
+                        rx_buff_index--;  // delete last symbol
+                    }
                 }
                 else if (rx_raw_buff[i] == '\x0D') {    // 0D - Enter code
                     cli_cmd_start();
@@ -237,7 +239,7 @@ static void cli_cmd_process(void) {
 
     if (cli_ext_cmds[cli_current_cmd_index].func(cli_cmd_argc, cli_cmd_argv, CLI_CALL_REPEATED) != E_ASYNC_WAIT) {
         cli_current_cmd_index = CLI_CMD_INACTIVE_INDEX;
-        cli_safe_print("\r\n");
+        cli_safe_print("\r\n\r\n");
         cli_print(CLI_PROMPT);
         rx_buff_index = 0;
         is_rx_overflow = false;
@@ -250,7 +252,7 @@ static void cli_cmd_break(void) {
 
     cli_ext_cmds[cli_current_cmd_index].func(cli_cmd_argc, cli_cmd_argv, CLI_CALL_TERMINATE);
     cli_current_cmd_index = CLI_CMD_INACTIVE_INDEX;
-    cli_safe_print("\r\n");
+    cli_safe_print("\r\n\r\n");
     cli_print(CLI_PROMPT);
     rx_buff_index = 0;
     is_rx_overflow = false;

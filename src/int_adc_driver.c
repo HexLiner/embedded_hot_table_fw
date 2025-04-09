@@ -46,7 +46,31 @@ void int_adc_init(int_adc_clk_src_t clk_src, int_adc_sample_rate_t smp_rate) {
     // Enable ADC IRQ
     ADC1->ISR = 0xFFFF;   // Clear flags
     ADC1->IER = 0;
-    NVIC_EnableIRQ(ADC1_IRQn);
+}
+
+
+void int_adc_handler(void) {
+    uint32_t status;
+    volatile uint16_t adc_dr_skip;
+
+
+    status = ADC1->ISR;
+    if (status & ADC_ISR_EOC) {
+        if (active_channels[active_channel_index]->samples_cnt < active_channels[active_channel_index]->samples_qty) {
+            active_channels[active_channel_index]->buffer += ADC1->DR;
+            active_channels[active_channel_index]->samples_cnt++;
+        }
+        else {
+            adc_dr_skip = ADC1->DR;
+        }
+        active_channel_index++;
+        if (active_channel_index >= active_channels_qty) active_channel_index = 0;
+    }
+    if (status & ADC_ISR_EOS) {
+        active_channel_index = 0;
+    }
+
+    ADC1->ISR |= (ADC_ISR_EOS | ADC_ISR_EOC);   // Clear flags
 }
 
 
@@ -181,32 +205,4 @@ static bool int_adc_enable(void) {
 static void int_adc_disable(void) {
     ADC1->CR |= ADC_CR_ADSTP;
     ADC1->CR |= ADC_CR_ADDIS;
-}
-
-
-
-
-void ADC1_IRQHandler(void);
-void ADC1_IRQHandler(void) {
-    uint32_t status;
-    volatile uint16_t adc_dr_skip;
-
-
-    status = ADC1->ISR;
-    if (status & ADC_ISR_EOC) {
-        if (active_channels[active_channel_index]->samples_cnt < active_channels[active_channel_index]->samples_qty) {
-            active_channels[active_channel_index]->buffer += ADC1->DR;
-            active_channels[active_channel_index]->samples_cnt++;
-        }
-        else {
-            adc_dr_skip = ADC1->DR;
-        }
-        active_channel_index++;
-        if (active_channel_index >= active_channels_qty) active_channel_index = 0;
-    }
-    if (status & ADC_ISR_EOS) {
-        active_channel_index = 0;
-    }
-
-    ADC1->ISR |= (ADC_ISR_EOS | ADC_ISR_EOC);   // Clear flags
 }

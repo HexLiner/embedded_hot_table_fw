@@ -23,9 +23,6 @@
 #define SCL_IS_DOWN   !(i2c_scl_port->IDR & (1 << i2c_scl_pin))
 
 
-static i2c_t *i2cs[I2C_MAX_QTY];
-static uint8_t i2cs_qty = 0;
-
 static timer_t i2c_timeout_timer;
 static GPIO_TypeDef *i2c_sda_port;
 static uint8_t i2c_sda_pin;
@@ -52,13 +49,18 @@ static void i2c_clock_delay(void);
 /// @return  @ref error_t
 //  ***************************************************************************
 error_t i2c_init(i2c_t *i2c) {
-    if (i2cs_qty >= I2C_MAX_QTY) ERROR_FATAL(i2c_init, __LINE__);
-
-    i2cs[i2cs_qty] = i2c;
-    i2cs_qty++;
-    
     i2c_enable(i2c);
     return i2c_clock_delay_init(i2c->speed_hz);
+}
+
+
+//  ***************************************************************************
+/// @brief  I2C handler
+/// @param  i2c
+/// @return none
+//  ***************************************************************************
+void i2c_handler(i2c_t *i2c) {
+
 }
 
 
@@ -210,6 +212,7 @@ error_t i2c_bus_clear(i2c_t *i2c) {
     */
    return E_OK;
 }
+
 
 
 

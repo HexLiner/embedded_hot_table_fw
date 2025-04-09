@@ -5,6 +5,7 @@
 #include "hal/gpio/gpio.h"
 #include "hal/sysclk/sysclk.h"
 #include "hal/systimer/systimer.h"
+#include "irq_handlers.h"
 #include "mcu_clock.h"
 #include "profiles.h"
 #include "cli.h"
@@ -20,16 +21,14 @@
 
 * медианный фильтр в драйвер АЦП
 
-* приоритеты IRQ
-
-* что-нибудь сделать в HardFault_Handler для индикации
-
 */
 
 
 uint8_t selected_item = 0;
 
 int main (void) {
+    irq_handlers_init();
+
     error_handling_init();
     
     mcu_clock_set_normal_config();

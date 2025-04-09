@@ -7,6 +7,8 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include <stdio.h>
+#include <stdarg.h>
 #include "common/error.h"
 
 
@@ -14,7 +16,8 @@
 #define CLI_TX_BUFF_SIZE      (100)
 #define CLI_RX_BUFF_SIZE      (100)
 #define CLI_RX_RAW_BUFF_SIZE  (100)
-#define CLI_PROMPT            ("\r\n> ")
+#define CLI_PRINTF_BUFF_SIZE  (100)
+#define CLI_PROMPT            ("> ")
 
 
 typedef enum {
@@ -42,6 +45,9 @@ extern void cli_process(void);
 
 extern error_t cli_print(const uint8_t *str);
 extern error_t cli_safe_print(const uint8_t *str);
+
+extern error_t cli_printf(const char *format, ...);
+extern error_t cli_safe_printf(const char *format, ...);
 
 
 #endif  // _CLI_H_

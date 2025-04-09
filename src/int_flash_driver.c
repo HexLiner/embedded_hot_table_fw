@@ -92,6 +92,7 @@ bool int_flash_driver_enable_protect(void) {
 /// @brief  Erase FLASH page
 /// @param  address
 /// @return true - success, false - fail
+/// @note   Address must be even.
 //  ***************************************************************************
 __ramfunc bool int_flash_driver_erase_page(uint32_t address) {
     flash_unlock();
@@ -111,6 +112,16 @@ __ramfunc bool int_flash_driver_erase_page(uint32_t address) {
 }
 
 
+//  ***************************************************************************
+/// @brief  Write data to FLASH
+/// @param  address
+/// @param  buffer
+/// @param  size
+/// @retval none
+/// @return true - success, false - fail
+/// @note   Memory must be cleared.
+/// @note   Address ans size must be even.
+//  ***************************************************************************
 __ramfunc bool int_flash_driver_write_bytes(uint32_t address, const uint8_t *buffer, uint32_t size) {
     int32_t buff_index;
     uint16_t word;
@@ -141,12 +152,11 @@ __ramfunc bool int_flash_driver_write_bytes(uint32_t address, const uint8_t *buf
 /// @param  buffer
 /// @param  size
 /// @retval buffer
-/// @return true - success, false - fail
+/// @return none
+/// @note   Address ans size can be any
 //  ***************************************************************************
-bool int_flash_driver_read_bytes(uint32_t address, uint8_t *buffer, uint32_t size) {
-    if ((address & 0x01) || (size & 0x01)) return false;
+void int_flash_driver_read_bytes(uint32_t address, uint8_t *buffer, uint32_t size) {
     memcpy(buffer, (uint8_t*)(address), size);
-    return true;
 }
 
 

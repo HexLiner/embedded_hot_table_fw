@@ -17,14 +17,21 @@ typedef struct {
     uint32_t poly;    // or reversed poly, if CRC_REFOUT == true
     uint32_t init;
     bool refin;
+    bool refout;
     uint32_t xorout;
 } crc_calc_settings_t;
 
 
-extern uint32_t crc_hw_clac(const uint8_t *data, uint32_t data_qty, crc_calc_settings_t *crc_settings);
-extern uint32_t crc_hw_continue_clac(uint32_t init, const uint8_t *data, uint32_t data_qty, crc_calc_settings_t *crc_settings);
 
-extern uint32_t crc_clac(const uint8_t *data, uint32_t data_qty, crc_calc_settings_t *crc_settings);
-extern uint32_t crc_continue_clac(uint32_t init, const uint8_t *data, uint32_t data_qty, crc_calc_settings_t *crc_settings);
+extern const crc_calc_settings_t crc_16_modbus;
+extern const crc_calc_settings_t crc_hw_32_posix;
+
+
+extern uint32_t crc_hw_clac(const crc_calc_settings_t *crc_settings, const uint8_t *data, uint32_t data_qty);
+extern uint32_t crc_hw_continue_clac(const crc_calc_settings_t *crc_settings, uint32_t init, const uint8_t *data, uint32_t data_qty);
+
+extern uint32_t crc_sw_clac(const crc_calc_settings_t *crc_settings, const uint8_t *data, uint32_t data_qty);
+extern uint32_t crc_sw_continue_clac(const crc_calc_settings_t *crc_settings, uint32_t init, const uint8_t *data, uint32_t data_qty);
+
 
 #endif // _CRC_CALC_H_

@@ -19,7 +19,7 @@ extern bool int_flash_driver_enable_protect(void);
 
 extern __ramfunc bool int_flash_driver_erase_page(uint32_t address);
 extern __ramfunc bool int_flash_driver_write_bytes(uint32_t address, const uint8_t *data, uint32_t data_size);
-extern bool int_flash_driver_read_bytes(uint32_t address, uint8_t *data, uint32_t data_size);
+extern void int_flash_driver_read_bytes(uint32_t address, uint8_t *data, uint32_t data_size);
 
 
 #endif // _INT_FLASH_DRIVER_H_

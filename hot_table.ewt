@@ -5821,6 +5821,12 @@
             <name>$PROJ_DIR$\src\cli_cmd.h</name>
         </file>
         <file>
+            <name>$PROJ_DIR$\src\crc_calc.c</name>
+        </file>
+        <file>
+            <name>$PROJ_DIR$\src\crc_calc.h</name>
+        </file>
+        <file>
             <name>$PROJ_DIR$\src\error_handling.c</name>
         </file>
         <file>

@@ -57,36 +57,6 @@ void cli_process(void) {
     cli_send_process();
 }
 
-/*
-//  ***************************************************************************
-/// @brief  Safe print string with formatter
-/// @note   Variadic function
-/// @param  format - format specifiers string
-/// @return @ref error_t
-//  ***************************************************************************
-error_t cli_printf(void *stream, const char *format, ...) {
-    va_list va;
-    int len;
-    error_t result;
-    timer_t printf_busy_timeout_timer;
-    uint8_t 
-
-
-    va_start(va, format);
-    len = vsnprintf(cli_readline->buffer, 160, format, va);
-    va_end(va);
-
-    if (len > (160 - 1)) return E_NOT_COMPLETED;
-
-
-    printf_busy_timeout_timer = timer_start_ms(200);
-    do {
-        result = cli_puts(cli_readline, cli_readline->buffer);
-        if (timer_triggered(printf_busy_timeout_timer)) return result;
-    } while (result != E_OK);
-    return result;
-}*/
-
 
 error_t cli_print(const uint8_t *str) {
     uint32_t size;
@@ -119,6 +89,44 @@ error_t cli_safe_print(const uint8_t *str) {
     }
     
     return E_OK;
+}
+
+
+//  ***************************************************************************
+/// @brief  Print string with formatter
+/// @param  format - format specifiers string
+/// @return @ref error_t
+/// @note   Variadic function
+//  ***************************************************************************
+error_t cli_printf(const char *format, ...) {
+    va_list va;
+    char printf_buff[CLI_PRINTF_BUFF_SIZE];
+
+
+    va_start(va, format);
+    vsnprintf(printf_buff, CLI_PRINTF_BUFF_SIZE, format, va);
+    va_end(va);
+
+    return cli_print(printf_buff);
+}
+
+
+//  ***************************************************************************
+/// @brief  Safe print string with formatter
+/// @param  format - format specifiers string
+/// @return @ref error_t
+/// @note   Variadic function
+//  ***************************************************************************
+error_t cli_safe_printf(const char *format, ...) {
+    va_list va;
+    char printf_buff[CLI_PRINTF_BUFF_SIZE];
+
+
+    va_start(va, format);
+    vsnprintf(printf_buff, CLI_PRINTF_BUFF_SIZE, format, va);
+    va_end(va);
+
+    return cli_safe_print(printf_buff);
 }
 
 
@@ -175,50 +183,52 @@ static void cli_rx_process(void) {
 
 
 static void cli_cmd_start(void) {
-    const uint8_t *cli_incorrect_cmd_msg = "\r\nCMD not found!";
+    const uint8_t *cli_incorrect_cmd_msg = "CMD not found!";
+    const uint8_t *cli_incorrect_args_msg = "Incorrect arg!";
+    const uint8_t *cli_incorrect_failed_msg = "Failed!";
     error_t result;
   
-  
-    rx_buff[rx_buff_index] = '\0';
-    pars_get_tokens_from_string(rx_buff, " ", cli_cmd_argv, CLI_CMD_MAX_ARG_QTY, &cli_cmd_argc);
-    if (cli_cmd_argc == 0) {
-        cli_print(CLI_PROMPT);
-    }
-    else if (is_rx_overflow) {
-        rx_buff_index = 0;
-        is_rx_overflow = false;
-        cli_print(cli_incorrect_cmd_msg);
-        cli_print(CLI_PROMPT);
 
+    if (is_rx_overflow) {
+        cli_safe_print("\r\n");
+        cli_safe_print(cli_incorrect_cmd_msg);
+        cli_cmd_argc = 0;
     }
     else {
+        rx_buff[rx_buff_index] = '\0';
+        pars_get_tokens_from_string(rx_buff, " ", cli_cmd_argv, CLI_CMD_MAX_ARG_QTY, &cli_cmd_argc);
+    }
+
+
+    if (cli_cmd_argc > 0) {
         for (cli_current_cmd_index = (cli_ext_cmds_qty - 1); cli_current_cmd_index > CLI_CMD_INACTIVE_INDEX; cli_current_cmd_index--) {
             if (strcmp((char*)cli_cmd_argv[0], (char*)cli_ext_cmds[cli_current_cmd_index].name) == 0) break;
         }
 
+        cli_safe_print("\r\n");
         if (cli_current_cmd_index != CLI_CMD_INACTIVE_INDEX) {
-            cli_print("\r\n");
             result = cli_ext_cmds[cli_current_cmd_index].func(cli_cmd_argc, cli_cmd_argv, CLI_CALL_FIRST);
-            if (result != E_ASYNC_WAIT) {
+            if (result == E_ASYNC_WAIT) {
+                return;
+            }
+            else {
                 cli_current_cmd_index = CLI_CMD_INACTIVE_INDEX;
-                rx_buff_index = 0;
-                if (result == E_INVALID_ARG) cli_print("Incorrect arg!");
-                else if (result == E_FAILED) cli_print("Failed!");
-                cli_print("\r\n");
-                cli_print(CLI_PROMPT);
+                if (result == E_INVALID_ARG) cli_safe_print(cli_incorrect_args_msg);
+                else if (result == E_FAILED) cli_safe_print(cli_incorrect_failed_msg);
             }
         }
         else if (strcmp((char*)cli_cmd_argv[0], "help") == 0) {
             cli_int_cmd_help();
-            rx_buff_index = 0;
-            cli_print(CLI_PROMPT);
         }
         else {
-            rx_buff_index = 0;
-            cli_print(cli_incorrect_cmd_msg);
-            cli_print(CLI_PROMPT);
+            cli_safe_print(cli_incorrect_cmd_msg);
         }
     }
+
+    cli_safe_print("\r\n\r\n");
+    cli_print(CLI_PROMPT);
+    rx_buff_index = 0;
+    is_rx_overflow = false;
 }
 
 
@@ -227,8 +237,10 @@ static void cli_cmd_process(void) {
 
     if (cli_ext_cmds[cli_current_cmd_index].func(cli_cmd_argc, cli_cmd_argv, CLI_CALL_REPEATED) != E_ASYNC_WAIT) {
         cli_current_cmd_index = CLI_CMD_INACTIVE_INDEX;
-        rx_buff_index = 0;
+        cli_safe_print("\r\n");
         cli_print(CLI_PROMPT);
+        rx_buff_index = 0;
+        is_rx_overflow = false;
     }
 }
 
@@ -238,8 +250,10 @@ static void cli_cmd_break(void) {
 
     cli_ext_cmds[cli_current_cmd_index].func(cli_cmd_argc, cli_cmd_argv, CLI_CALL_TERMINATE);
     cli_current_cmd_index = CLI_CMD_INACTIVE_INDEX;
-    rx_buff_index = 0;
+    cli_safe_print("\r\n");
     cli_print(CLI_PROMPT);
+    rx_buff_index = 0;
+    is_rx_overflow = false;
 }
 
 
@@ -250,12 +264,12 @@ static void cli_int_cmd_help(void) {
 
 
     for (i = 0; i < cli_ext_cmds_qty; i++) {
-        cli_safe_print("\r\n");
-        cli_safe_print(cli_ext_cmds[i].name);
+        if (i > 0) cli_safe_print("\r\n");
         if (cli_ext_cmds[i].usage != NULL) {
-            cli_safe_print(" ");
-            cli_safe_print(cli_ext_cmds[i].usage);
+            cli_safe_printf("%s %s", cli_ext_cmds[i].name, cli_ext_cmds[i].usage);
+        }
+        else {
+            cli_safe_print(cli_ext_cmds[i].name);
         }
     }
-    cli_safe_print("\r\n");
 }

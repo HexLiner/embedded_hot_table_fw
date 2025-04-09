@@ -16,12 +16,9 @@
 
 
 /*
-* форматированный вывод CLI
 * редизайн буферов CLI
 
 * медианный фильтр в драйвер АЦП
-
-* добавить CRC в карту памяти
 
 * приоритеты IRQ
 
@@ -44,7 +41,7 @@ int main (void) {
     profiles_init();
     cli_cmd_init();
     system_operation_init();
-    cli_safe_print("\r\n/E/ Hi! /\r\n\r\n> ");
+    cli_safe_printf("\r\n/E/ Hi! /\r\n\r\n> ");
 
 
     while (1) {

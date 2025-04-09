@@ -5,7 +5,6 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <stdlib.h>
-#include <stdio.h>
 #include "usb_cdc.h"
 #include "cli.h"
 #include "parsers.h"
@@ -94,15 +93,13 @@ static error_t cli_cmd_reboot(uint32_t argc, const uint8_t **argv, cli_call_stat
 static error_t cli_cmd_rr(uint32_t argc, const uint8_t **argv, cli_call_state_t state) {
     int32_t addr;
     uint16_t reg_value;
-    uint8_t string[10];
 
 
     if (argc != 2) return E_INVALID_ARG;
     if (!pars_string_to_digit(argv[1], &addr) || (addr > RG_MAX_REG_ADDR) || (addr < 0)) return E_INVALID_ARG;
 
     if (regs_read_reg(addr, &reg_value)) {
-        snprintf(string, sizeof(string), "%d", reg_value);
-        cli_safe_print(string);
+        cli_safe_printf("%d", reg_value);
     }
     else {
         return E_FAILED;
@@ -139,22 +136,20 @@ static error_t cli_cmd_clidbg(uint32_t argc, const uint8_t **argv, cli_call_stat
 static error_t cli_cmd_tlog(uint32_t argc, const uint8_t **argv, cli_call_state_t state) {
     static int32_t log_period_ms;
     static timer_t log_timer;
-    uint8_t string[10];
 
 
     if (state == CLI_CALL_FIRST) {
         if (argc != 2) return E_INVALID_ARG;
         if (!pars_string_to_digit(argv[1], &log_period_ms) || (log_period_ms < 0)) return E_INVALID_ARG;
 
-        cli_safe_print("Temp_c; Heat_en");
+        cli_safe_printf("Temp_c; Heat_en");
         log_timer = timer_start_ms(log_period_ms);
         return E_ASYNC_WAIT;
     }
     if (state == CLI_CALL_REPEATED) {
         if (timer_triggered(log_timer)) {
             log_timer = timer_restart_ms(log_timer, log_period_ms);
-            snprintf(string, sizeof(string), "\r\n%d; %d", heater_current_temperature_c, is_heater_pin_en);
-            cli_safe_print(string);
+            cli_safe_printf("\r\n%d; %d", heater_current_temperature_c, is_heater_pin_en);
             return E_ASYNC_WAIT;
         }
 
@@ -170,7 +165,7 @@ static error_t cli_cmd_tset(uint32_t argc, const uint8_t **argv, cli_call_state_
 
     if (argc != 2) return E_INVALID_ARG;
     if (!is_cli_dbg_mode) {
-        cli_safe_print("CLI debug mode disabled!");
+        cli_safe_printf("CLI debug mode disabled!");
     }
     if (!pars_string_to_digit(argv[1], &temperature_c) || (temperature_c > HEATER_MAX_TEMP_C) || (temperature_c < 0)) return E_INVALID_ARG;
 
@@ -180,7 +175,6 @@ static error_t cli_cmd_tset(uint32_t argc, const uint8_t **argv, cli_call_state_
 
 
 static error_t cli_cmd_tconf(uint32_t argc, const uint8_t **argv, cli_call_state_t state) {
-    uint8_t string[100];
     int32_t active_time_ms;
     int32_t delay_time_ms;
     int32_t hist_on_c;
@@ -188,8 +182,7 @@ static error_t cli_cmd_tconf(uint32_t argc, const uint8_t **argv, cli_call_state
 
 
     if (argc == 1) {
-        snprintf(string, sizeof(string), "act_ms = %d\r\ndel_ms = %d\r\nhon_c = %d\r\nnoff_c = %d", heater_active_time_ms, heater_delay_time_ms, heater_hist_on_c, heater_hist_off_c);
-        cli_safe_print(string);
+        cli_safe_printf("act_ms = %d\r\ndel_ms = %d\r\nhon_c = %d\r\nnoff_c = %d", heater_active_time_ms, heater_delay_time_ms, heater_hist_on_c, heater_hist_off_c);
         return E_OK;
     }
     else if (argc == 5) {
@@ -214,7 +207,7 @@ static error_t cli_cmd_fset(uint32_t argc, const uint8_t **argv, cli_call_state_
 
     if (argc != 3) return E_INVALID_ARG;
     if (!is_cli_dbg_mode) {
-        cli_safe_print("CLI debug mode disabled!");
+        cli_safe_printf("CLI debug mode disabled!");
     }
     if (!pars_string_to_digit(argv[1], &period_s) || (period_s < 0)) return E_INVALID_ARG;
     if (!pars_string_to_digit(argv[2], &duty_cycle_pct) || (duty_cycle_pct < 0)) return E_INVALID_ARG;

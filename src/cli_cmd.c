@@ -24,6 +24,9 @@ static error_t cli_cmd_tset(uint32_t argc, const uint8_t **argv, cli_call_state_
 static error_t cli_cmd_tconf(uint32_t argc, const uint8_t **argv, cli_call_state_t state);
 static error_t cli_cmd_fset(uint32_t argc, const uint8_t **argv, cli_call_state_t state);
 
+static bool pars_string_to_s32_and_check(const uint8_t *str, int32_t *digit, int32_t min, int32_t max);
+static bool pars_string_to_u32_and_check(const uint8_t *str, uint32_t *digit, uint32_t min, uint32_t max);
+
 
 const cli_cmd_t cli_cmds[] = {
     {
@@ -91,12 +94,12 @@ static error_t cli_cmd_reboot(uint32_t argc, const uint8_t **argv, cli_call_stat
 
 
 static error_t cli_cmd_rr(uint32_t argc, const uint8_t **argv, cli_call_state_t state) {
-    int32_t addr;
+    uint32_t addr;
     uint16_t reg_value;
 
 
     if (argc != 2) return E_INVALID_ARG;
-    if (!pars_string_to_digit(argv[1], &addr) || (addr > RG_MAX_REG_ADDR) || (addr < 0)) return E_INVALID_ARG;
+    if (!pars_string_to_u32_and_check(argv[1], &addr, 0, RG_MAX_REG_ADDR)) return E_INVALID_ARG;
 
     if (regs_read_reg(addr, &reg_value)) {
         cli_safe_printf("%d", reg_value);
@@ -109,13 +112,13 @@ static error_t cli_cmd_rr(uint32_t argc, const uint8_t **argv, cli_call_state_t 
 
 
 static error_t cli_cmd_wr(uint32_t argc, const uint8_t **argv, cli_call_state_t state) {
-    int32_t addr;
-    int32_t reg_value;
+    uint32_t addr;
+    uint32_t reg_value;
 
 
     if (argc != 3) return E_INVALID_ARG;
-    if (!pars_string_to_digit(argv[1], &addr) || (addr > RG_MAX_REG_ADDR) || (addr < 0)) return E_INVALID_ARG;
-    if (!pars_string_to_digit(argv[2], &reg_value) || (reg_value > 0xFFFF) || (reg_value < 0)) return E_INVALID_ARG;
+    if (!pars_string_to_u32_and_check(argv[1], &addr, 0, RG_MAX_REG_ADDR)) return E_INVALID_ARG;
+    if (!pars_string_to_u32_and_check(argv[2], &reg_value, 0, UINT16_MAX)) return E_INVALID_ARG;
 
     if (!regs_write_reg(addr, reg_value)) {
         return E_FAILED;
@@ -134,13 +137,13 @@ static error_t cli_cmd_clidbg(uint32_t argc, const uint8_t **argv, cli_call_stat
 
 
 static error_t cli_cmd_tlog(uint32_t argc, const uint8_t **argv, cli_call_state_t state) {
-    static int32_t log_period_ms;
+    static uint32_t log_period_ms;
     static timer_t log_timer;
 
 
     if (state == CLI_CALL_FIRST) {
         if (argc != 2) return E_INVALID_ARG;
-        if (!pars_string_to_digit(argv[1], &log_period_ms) || (log_period_ms < 0)) return E_INVALID_ARG;
+        if (!pars_string_to_u32_and_check(argv[1], &log_period_ms, 0, 0)) return E_INVALID_ARG;
 
         cli_safe_printf("Temp_c; Heat_en");
         log_timer = timer_start_ms(log_period_ms);
@@ -160,14 +163,14 @@ static error_t cli_cmd_tlog(uint32_t argc, const uint8_t **argv, cli_call_state_
 
 
 static error_t cli_cmd_tset(uint32_t argc, const uint8_t **argv, cli_call_state_t state) {
-    int32_t temperature_c;
+    uint32_t temperature_c;
 
 
     if (argc != 2) return E_INVALID_ARG;
     if (!is_cli_dbg_mode) {
         cli_safe_printf("CLI debug mode disabled!");
     }
-    if (!pars_string_to_digit(argv[1], &temperature_c) || (temperature_c > HEATER_MAX_TEMP_C) || (temperature_c < 0)) return E_INVALID_ARG;
+    if (!pars_string_to_u32_and_check(argv[1], &temperature_c, 0, HEATER_MAX_TEMP_C)) return E_INVALID_ARG;
 
     heater_en((uint8_t)temperature_c);
     return E_OK;
@@ -175,10 +178,10 @@ static error_t cli_cmd_tset(uint32_t argc, const uint8_t **argv, cli_call_state_
 
 
 static error_t cli_cmd_tconf(uint32_t argc, const uint8_t **argv, cli_call_state_t state) {
-    int32_t active_time_ms;
-    int32_t delay_time_ms;
-    int32_t hist_on_c;
-    int32_t hist_off_c;
+    uint32_t active_time_ms;
+    uint32_t delay_time_ms;
+    uint32_t hist_on_c;
+    uint32_t hist_off_c;
 
 
     if (argc == 1) {
@@ -186,10 +189,10 @@ static error_t cli_cmd_tconf(uint32_t argc, const uint8_t **argv, cli_call_state
         return E_OK;
     }
     else if (argc == 5) {
-        if (!pars_string_to_digit(argv[1], &active_time_ms) || (active_time_ms < 0)) return E_INVALID_ARG;
-        if (!pars_string_to_digit(argv[2], &delay_time_ms) || (delay_time_ms < 0)) return E_INVALID_ARG;
-        if (!pars_string_to_digit(argv[3], &hist_on_c) || (hist_on_c < 0) || (hist_on_c > 0xFF)) return E_INVALID_ARG;
-        if (!pars_string_to_digit(argv[4], &hist_off_c) || (hist_off_c < 0) || (hist_off_c > 0xFF)) return E_INVALID_ARG;
+        if (!pars_string_to_u32_and_check(argv[1], &active_time_ms, 0, 0)) return E_INVALID_ARG;
+        if (!pars_string_to_u32_and_check(argv[2], &delay_time_ms, 0, 0)) return E_INVALID_ARG;
+        if (!pars_string_to_u32_and_check(argv[3], &hist_on_c, 0, UINT8_MAX)) return E_INVALID_ARG;
+        if (!pars_string_to_u32_and_check(argv[4], &hist_off_c, 0, UINT8_MAX)) return E_INVALID_ARG;
         
         heater_active_time_ms = active_time_ms;
         heater_delay_time_ms = delay_time_ms;
@@ -202,16 +205,34 @@ static error_t cli_cmd_tconf(uint32_t argc, const uint8_t **argv, cli_call_state
 
 
 static error_t cli_cmd_fset(uint32_t argc, const uint8_t **argv, cli_call_state_t state) {
-    int32_t period_s, duty_cycle_pct;
+    uint32_t period_s, duty_cycle_pct;
 
 
     if (argc != 3) return E_INVALID_ARG;
     if (!is_cli_dbg_mode) {
         cli_safe_printf("CLI debug mode disabled!");
     }
-    if (!pars_string_to_digit(argv[1], &period_s) || (period_s < 0)) return E_INVALID_ARG;
-    if (!pars_string_to_digit(argv[2], &duty_cycle_pct) || (duty_cycle_pct < 0)) return E_INVALID_ARG;
+    if (!pars_string_to_u32_and_check(argv[1], &period_s, 0, 0)) return E_INVALID_ARG;
+    if (!pars_string_to_u32_and_check(argv[2], &duty_cycle_pct, 0, 100)) return E_INVALID_ARG;
 
-    fun_en((uint8_t)period_s, (uint32_t)duty_cycle_pct);
+    fun_en(period_s, (uint8_t)duty_cycle_pct);
     return E_OK;
+}
+
+
+
+
+static bool pars_string_to_s32_and_check(const uint8_t *str, int32_t *digit, int32_t min, int32_t max) {
+    if (!pars_string_to_s32(str, digit)) return false;
+    if (min == max) return true;
+    if ((*digit < min) || (*digit > max)) return false;
+    return true;
+}
+
+
+static bool pars_string_to_u32_and_check(const uint8_t *str, uint32_t *digit, uint32_t min, uint32_t max) {
+    if (!pars_string_to_u32(str, digit)) return false;
+    if (min == max) return true;
+    if ((*digit < min) || (*digit > max)) return false;
+    return true;
 }

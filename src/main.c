@@ -42,6 +42,8 @@ int main (void) {
     system_operation_init();
     cli_safe_printf("\r\n/E/ Hi! /\r\n\r\n> ");
 
+    delay_ms(1000);
+
 
     while (1) {
         regs_process();

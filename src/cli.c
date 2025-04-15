@@ -68,9 +68,12 @@ error_t cli_print(const uint8_t *str) {
 
 
 error_t cli_safe_print(const uint8_t *str) {
+    static timer_t dead_time_timer = 0;
     timer_t timeout_timer;
     uint32_t size, block_size, str_index;
 
+
+    if (!timer_triggered(dead_time_timer)) return E_TIMEOUT;
 
     size = strlen((char*)str);
     if (size > sizeof(tx_ring_buff_data)) block_size = sizeof(tx_ring_buff_data);
@@ -85,7 +88,10 @@ error_t cli_safe_print(const uint8_t *str) {
             if (size > sizeof(tx_ring_buff_data)) block_size = sizeof(tx_ring_buff_data);
             else block_size = size;
         }
-        if (timer_triggered(timeout_timer)) return E_TIMEOUT;
+        if (timer_triggered(timeout_timer)) {
+            dead_time_timer = timer_start_ms(100);
+            return E_TIMEOUT;
+        }
     }
     
     return E_OK;

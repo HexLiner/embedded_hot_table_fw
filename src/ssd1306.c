@@ -1,5 +1,6 @@
 #include <stdint.h>
 #include <stdlib.h>
+#include <string.h>
 #include <stdbool.h>
 #include "ssd1306.h"
 #include "hal/i2c/i2c_driver.h"
@@ -138,6 +139,9 @@ static const uint8_t fount[][5] = {
     {0x04, 0x02, 0x04, 0x02, 0x00},    // ~
 };
 
+static bool is_gram_data_changed = true;
+static uint8_t gram_buff[(SSD1306_W / 8) * SSD1306_H];
+
 static i2c_transaction_t transaction;
 static uint32_t i2c_timeout_int;
 static i2c_t *i2c_int;
@@ -205,6 +209,39 @@ void ssd1306_init(i2c_t *i2c, uint8_t i2c_addr, uint32_t i2c_timeout) {
 }
 
 
+void ssd1306_process(void) {
+    static bool is_set_area_proc = true;
+    static uint32_t buff_index;
+    uint8_t simw_data[17];
+
+
+    if (is_set_area_proc) {
+        if (!is_gram_data_changed) return;
+
+        // set area
+        ssd1306_send_cmd(SSD1306_COLUMNADDR);
+        ssd1306_send_cmd(0);
+        ssd1306_send_cmd(SSD1306_W - 1);
+        ssd1306_send_cmd(SSD1306_PAGEADDR);
+        ssd1306_send_cmd(0);
+        ssd1306_send_cmd(SSD1306_H - 1);
+
+        buff_index = 0;
+        is_gram_data_changed = false;
+        is_set_area_proc = false;
+    }
+    else {
+        simw_data[0] = 0x40;   // is data
+        memcpy(&simw_data[1], &gram_buff[buff_index], 16);
+        ssd1306_i2c_write_blocking(simw_data, 17);
+        buff_index += 16;
+        if (buff_index > sizeof(gram_buff)) {
+            is_set_area_proc = true;
+        }
+    }
+}
+
+
 // notes: GRAM data is not cleared. GRAM data is written in standby.
 void ssd1306_standby(bool en_dis) {
     if (en_dis) ssd1306_send_cmd(SSD1306_DISPLAY_OFF);
@@ -213,43 +250,32 @@ void ssd1306_standby(bool en_dis) {
 
 
 void ssd1306_clear(void) {
-    uint8_t simw_data[17];
-    uint8_t i;
-
-
-    // init send data
-    simw_data[0] = 0x40;   // is data
-    for (i = 1; i < 17; i++) simw_data[i] = 0x00;
-
-    // set area
-    ssd1306_send_cmd(SSD1306_COLUMNADDR);
-    ssd1306_send_cmd(0);
-    ssd1306_send_cmd(SSD1306_W - 1);
-    ssd1306_send_cmd(SSD1306_PAGEADDR);
-    ssd1306_send_cmd(0);
-    ssd1306_send_cmd(SSD1306_H - 1);
-
-    // send data
-    for (i = 0; i < 33; i++) ssd1306_i2c_write_blocking(simw_data, 17);
+    memset(gram_buff, 0, sizeof(gram_buff));
 }
 
 
-void ssd1306_set_img(uint8_t data, uint8_t x, uint8_t y) {
-    uint8_t send_data[2];
+void ssd1306_set_img(uint8_t *data, uint8_t x, uint8_t y, uint8_t w, uint8_t h) {
+    uint32_t hi, wi;
+    uint32_t buff_index_base, buff_index;
+    uint32_t data_index;
 
 
-    // set area
-    ssd1306_send_cmd(SSD1306_COLUMNADDR);
-    ssd1306_send_cmd(x);
-    ssd1306_send_cmd(x + 1);
-    ssd1306_send_cmd(SSD1306_PAGEADDR);
-    ssd1306_send_cmd(y >> 3);
-    ssd1306_send_cmd((SSD1306_H - 1) >> 3);
+    y = y >> 3;
+    if (h & 0b111) h += 0b1000;
+    h = h >> 3;
+    buff_index_base = (y * SSD1306_W) + x;
 
-    // send data
-    send_data[0] = 0x40;   // is data
-    send_data[1] = data;
-    ssd1306_i2c_write_blocking(send_data, 2);
+    data_index = 0;
+    for (hi = 0; hi < h; hi++) {
+        buff_index = buff_index_base + (SSD1306_W * hi);
+        for (wi = 0; wi < w; wi++) {
+            gram_buff[buff_index] = data[data_index];
+            buff_index++;
+            data_index++;
+        }
+    }
+
+    is_gram_data_changed = true;
 }
 
 
@@ -285,8 +311,8 @@ void ssd1306_print_str(const char *str, uint8_t min_str_size, ssd1306_fount_mode
 
 
 void ssd1306_print_simw(char simw, ssd1306_fount_mode_t ssd1306_fount_mode, uint8_t x, uint8_t y) {
-    uint8_t simw_w;
-    uint8_t simw_data[21];
+    uint8_t simw_w, simw_h;
+    uint8_t simw_data[20];
     uint8_t fount_data;
     uint8_t simw_data_index, simw_bit_cnt;
     uint8_t fount_data_index, fount_data_bit;
@@ -305,11 +331,10 @@ void ssd1306_print_simw(char simw, ssd1306_fount_mode_t ssd1306_fount_mode, uint
 
 
     // init send data
-    simw_data[0] = 0x40;   // is data
-    for (simw_data_index = 1; simw_data_index < 21; simw_data_index++) simw_data[simw_data_index] = 0;
+    for (simw_data_index = 0; simw_data_index < 20; simw_data_index++) simw_data[simw_data_index] = 0;
 
     // simw scaling
-    simw_data_index = 1;
+    simw_data_index = 0;
     simw_bit_cnt = 0;
     simw_pixel_msk = 0xFF << (8 - ssd1306_fount_mode);
     for (k_cnt = (ssd1306_fount_mode - 1); k_cnt >= 0; k_cnt--) {
@@ -328,23 +353,14 @@ void ssd1306_print_simw(char simw, ssd1306_fount_mode_t ssd1306_fount_mode, uint
         }
     }
     if (ssd1306_fount_mode == 2) {
-        for (i = 2; i < 21; i += 2) {
+        for (i = 1; i < 20; i += 2) {
             simw_data[i] = simw_data[i - 1];
         }
     }
 
-    // set area
     simw_w = SSD1306_SIMW_W * (uint8_t)ssd1306_fount_mode;
-    simw_w--;
-    ssd1306_send_cmd(SSD1306_COLUMNADDR);
-    ssd1306_send_cmd(x);
-    ssd1306_send_cmd(x + simw_w);
-    ssd1306_send_cmd(SSD1306_PAGEADDR);
-    ssd1306_send_cmd(y >> 3);
-    ssd1306_send_cmd((SSD1306_H - 1) >> 3);
-
-    // send data
-    ssd1306_i2c_write_blocking(simw_data, simw_data_index);
+    simw_h = SSD1306_SIMW_H * (uint8_t)ssd1306_fount_mode;
+    ssd1306_set_img(simw_data, x, y, simw_w, simw_h);
 }
 
 

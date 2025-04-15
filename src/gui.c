@@ -38,6 +38,7 @@ void gui_init(void) {
 
 
 void gui_process(void) {
+    ssd1306_process();
     if (timer_triggered(standby_timer) && !gui_is_standby) {
         ssd1306_standby(true);
         gui_is_standby = true;

@@ -64,14 +64,38 @@ void pars_get_tokens_from_string(uint8_t *str, const uint8_t *delimiters, const 
 
 
 //  ***************************************************************************
-/// @brief      Conver hex/dec string digit to digit
+/// @brief      Conver hex/dec string digit to S32
 /// @param      str - pointer, can't be NULL
 /// @param      digit - pointer, can't be NULL
 /// @retval     digit
 /// @return     bool
-/// @note       Symbol '*' in template is any symbol.
 //  ***************************************************************************
-bool pars_string_to_digit(const uint8_t *str, int32_t *digit) {
+bool pars_string_to_s32(const uint8_t *str, int32_t *digit) {
+    char *end_ptr = NULL;
+
+
+    // Hexadecimal format
+    if ((str[0] == '0') && (str[1] == 'x')) {
+        *digit = strtol((char*)str, &end_ptr, 16);
+    }
+    // Decimal format
+    else {
+        *digit = strtol((char*)str, &end_ptr, 10);
+    }
+
+    if (*end_ptr != '\0') return false;
+    return true;
+}
+
+
+//  ***************************************************************************
+/// @brief      Conver hex/dec string digit to U32
+/// @param      str - pointer, can't be NULL
+/// @param      digit - pointer, can't be NULL
+/// @retval     digit
+/// @return     bool
+//  ***************************************************************************
+bool pars_string_to_u32(const uint8_t *str, uint32_t *digit) {
     char *end_ptr = NULL;
 
 

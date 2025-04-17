@@ -1,42 +1,32 @@
 //  ***************************************************************************
-/// @file    gpio_stm32.c
-/// @brief   GPIO driver
+/// @file    gpio_p0.c
+/// @brief   GPIO driver for P0 periphery
 //  ***************************************************************************
-#include "hal/gpio/gpio.h"
+#include "hal/gpio.h"
 #include <stdlib.h>
 #include "common/error.h"
 
-// GPIO_STM32F0
 
 #define PORT_MASK                           (0xFFFF0000ul)
 #define PINS_MASK                           (0x0000FFFFul)
 
 
-
-
 //  ***************************************************************************
-/// @brief   Config pin(s)
-/// @param   pins - @ref gpio_pin_t, pin(s) to be configured
-/// @param   mode - @ref gpio_mode_t, pin operation mode
-/// @param   pull - @ref gpio_pull_t, pin pull-up/pull-down config
-/// @param   speed - @ref gpio_speed_t, pin slope control for output/alternate mode
-/// @param   alt_func - pin alternate function
-/// @param   output_state - pin state for output mode
+/// @brief   Config one pin
+/// @param   pins
+/// @param   mode
+/// @param   pull
+/// @param   speed
+/// @param   alt_func
+/// @param   output_state
 /// @return  none
 //  ***************************************************************************
 void gpio_config_pins(gpio_pin_t pins, gpio_mode_t mode, gpio_pull_t pull, gpio_speed_t speed, uint32_t alt_func, bool output_state) {
-    peripheral_t port;
-    uint32_t     pin, pin_reg_pos;
+    GPIO_TypeDef *port;
+    uint32_t     pin;
+    uint32_t     pin_2_bits_reg_pos, afr_index, pin_afr_reg_pos;
 
 
-    // Check port is valid
-    port = gpio_get_peripheral(pins);
-    if (port == NULL) ERROR_FATAL(gpio_config_pins, __LINE__);
-    pin = gpio_get_pin_n(pins);
-    pin_reg_pos = pin * 2;
-
-
-    // Calc register fields values
     uint32_t moder_mode, otyper_otype, ospeedr_ospeed, pupdr_pupd;
     switch (mode) {
         case GPIO_MODE_INPUT:           moder_mode = 0;    otyper_otype = 0;  break;
@@ -46,96 +36,113 @@ void gpio_config_pins(gpio_pin_t pins, gpio_mode_t mode, gpio_pull_t pull, gpio_
         case GPIO_MODE_ALT_FUNCTION:    moder_mode = 2;    otyper_otype = 0;  break;
         case GPIO_MODE_ALT_FUNCTION_PP: moder_mode = 2;    otyper_otype = 0;  break;
         case GPIO_MODE_ALT_FUNCTION_OD: moder_mode = 2;    otyper_otype = 1;  break;
-        default:                        ERROR_FATAL(gpio_config_pins, __LINE__); break;
+        #ifdef LIB_DEBUG_EH
+        default:                        error_fatal((uintptr_t)gpio_config_pins, __LINE__); break;
+        #endif   // LIB_DEBUG_EH
     }
     switch (pull) {
         case GPIO_PULL_NONE: pupdr_pupd = 0;  break;
         case GPIO_PULL_UP:   pupdr_pupd = 1;  break;
         case GPIO_PULL_DOWN: pupdr_pupd = 2;  break;
-        default:             ERROR_FATAL(gpio_config_pins, __LINE__); break;
+        #ifdef LIB_DEBUG_EH
+        default:             error_fatal((uintptr_t)gpio_config_pins, __LINE__); break;
+        #endif   // LIB_DEBUG_EH
     }
     switch (speed) {
         case GPIO_SPEED_LOW:    ospeedr_ospeed = 0;  break;
         case GPIO_SPEED_MEDIUM: ospeedr_ospeed = 2;  break;
         case GPIO_SPEED_HIGH:   ospeedr_ospeed = 3;  break;
-        default:                ERROR_FATAL(gpio_config_pins, __LINE__); break;
+        #ifdef LIB_DEBUG_EH
+        default:                error_fatal((uintptr_t)gpio_config_pins, __LINE__); break;
+        #endif   // LIB_DEBUG_EH
     }
 
 
-    //// order ???
-    ((GPIO_TypeDef*)port)->ODR     &= ~(1 << pin);
-    ((GPIO_TypeDef*)port)->ODR     |= ((output_state ? 1 : 0) << pin);
-    ((GPIO_TypeDef*)port)->OSPEEDR &= ~(0x03 << pin_reg_pos);
-    ((GPIO_TypeDef*)port)->OSPEEDR |= (ospeedr_ospeed << pin_reg_pos);
-    ((GPIO_TypeDef*)port)->AFR[pin >> 3] &= ~(4 << (pin & 0x7));
-    ((GPIO_TypeDef*)port)->AFR[pin >> 3] |= (alt_func << ((pin & 0x7) * 4));
-    ((GPIO_TypeDef*)port)->PUPDR   &= ~(0x03 << pin_reg_pos);
-    ((GPIO_TypeDef*)port)->PUPDR   |= (pupdr_pupd << pin_reg_pos);
-    ((GPIO_TypeDef*)port)->OTYPER  |= (otyper_otype << pin);
-    ((GPIO_TypeDef*)port)->MODER   &= ~(0x03 << pin_reg_pos);
-    ((GPIO_TypeDef*)port)->MODER   |= (moder_mode << pin_reg_pos);
+    port = (GPIO_TypeDef*)gpio_get_peripheral(pins);
+    pin = gpio_get_pin_n(pins);
+    #ifdef LIB_DEBUG_EH
+    if (port == NULL) error_fatal((uintptr_t)gpio_config_pins, __LINE__);
+    if ((1 << pin) != (pins & PINS_MASK)) error_fatal((uintptr_t)gpio_config_pins, __LINE__);
+    #endif   // LIB_DEBUG_EH
+    pin_2_bits_reg_pos = pin << 1;
+    afr_index = pin >> 3;
+    pin_afr_reg_pos = afr_index << 5; // optimisation from (pin & 0x7) * 4;
+
+    port->ODR     &= ~(1 << pin);
+    port->ODR     |= ((output_state ? 1 : 0) << pin);
+    port->OSPEEDR &= ~(0x03 << pin_2_bits_reg_pos);
+    port->OSPEEDR |= (ospeedr_ospeed << pin_2_bits_reg_pos);
+    port->AFR[afr_index] &= ~(0x0F << pin_afr_reg_pos);
+    port->AFR[afr_index] |= (alt_func << pin_afr_reg_pos);
+    port->PUPDR   &= ~(0x03 << pin_2_bits_reg_pos);
+    port->PUPDR   |= (pupdr_pupd << pin_2_bits_reg_pos);
+    port->OTYPER  |= (otyper_otype << pin);
+    port->MODER   &= ~(0x03 << pin_2_bits_reg_pos);
+    port->MODER   |= (moder_mode << pin_2_bits_reg_pos);
 }
 
 
 //  ***************************************************************************
 /// @brief   Set pin(s) (switch to "1" state), simultaneous set for all specified pins
-/// @param   pins - @ref gpio_pin_t, pin(s) to be set
+/// @param   pins
 /// @return  none
 //  ***************************************************************************
 void gpio_set_pins(gpio_pin_t pins) {
-    peripheral_t port;
+    GPIO_TypeDef *port;
 
 
-    port = gpio_get_peripheral(pins);
-    if (port == NULL) ERROR_FATAL(gpio_set_pins, __LINE__);
-
-    ((GPIO_TypeDef*)port)->BSRR = (pins & PINS_MASK) << 0;
+    port = (GPIO_TypeDef*)gpio_get_peripheral(pins);
+    #ifdef LIB_DEBUG_EH
+    if (port == NULL) error_fatal((uintptr_t)gpio_set_pins, __LINE__);
+    #endif   // LIB_DEBUG_EH
+    port->BSRR = pins & PINS_MASK;
 }
 
 
 //  ***************************************************************************
 /// @brief   Reset pin(s) (switch to "0" state), simultaneous reset for all specified pins
-/// @param   pins - @ref gpio_pin_t, pin(s) to be reset
+/// @param   pins
 /// @return  none
 //  ***************************************************************************
 void gpio_reset_pins(gpio_pin_t pins) {
-    peripheral_t port;
+    GPIO_TypeDef *port;
 
 
-    port = gpio_get_peripheral(pins);
-    if (port == NULL) ERROR_FATAL(gpio_reset_pins, __LINE__);
-
-    ((GPIO_TypeDef*)port)->BSRR = (pins & PINS_MASK) << 16;
+    port = (GPIO_TypeDef*)gpio_get_peripheral(pins);
+    #ifdef LIB_DEBUG_EH
+    if (port == NULL) error_fatal((uintptr_t)gpio_reset_pins, __LINE__);
+    #endif   // LIB_DEBUG_EH
+    port->BSRR = (pins & PINS_MASK) << 16;
 }
 
 
 //  ***************************************************************************
 /// @brief   Reads pin(s) state
-/// @param   pins - @ref gpio_pin_t, pin(s) to be read
-/// @return  result - @ref gpio_pin_t, pin(s) read
+/// @param   pins
+/// @return  gpio_pin_t
 //  ***************************************************************************
 gpio_pin_t gpio_read_pins(gpio_pin_t pins) {
-    peripheral_t port;
+    GPIO_TypeDef *port;
     uint32_t     read;
     gpio_pin_t   result;
 
 
-    port = gpio_get_peripheral(pins);
-    if (port == NULL) ERROR_FATAL(gpio_read_pins, __LINE__);
-
-    read = ((GPIO_TypeDef*)port)->IDR;
+    port = (GPIO_TypeDef*)gpio_get_peripheral(pins);
+    #ifdef LIB_DEBUG_EH
+    if (port == NULL) error_fatal((uintptr_t)gpio_read_pins, __LINE__);
+    #endif   // LIB_DEBUG_EH
+    read = port->IDR;
     result = (pins & PORT_MASK) | (read & pins & PINS_MASK);
-
     return result;
 }
 
 
 //  ***************************************************************************
-/// @brief   Decodes port (inside @ref gpio_pin_t) to peripheral base address pointer
-/// @param   pins - @ref gpio_pin_t, pin(s) to be decoded
-/// @return  peripheral base address pointer, NULL if error
+/// @brief   Decodes gpio_pin_t to peripheral base address pointer
+/// @param   pin
+/// @return  peripheral base address pointer
 //  ***************************************************************************
-peripheral_t gpio_get_peripheral(gpio_pin_t pin) {
+void *gpio_get_peripheral(gpio_pin_t pin) {
     gpio_pin_t port = (pin & PORT_MASK);
 
     #ifdef GPIOA
@@ -176,6 +183,11 @@ peripheral_t gpio_get_peripheral(gpio_pin_t pin) {
 }
 
 
+//  ***************************************************************************
+/// @brief   Decodes gpio_pin_t to pin number
+/// @param   pin
+/// @return  pin number
+//  ***************************************************************************
 uint8_t gpio_get_pin_n(gpio_pin_t pin) {
     pin = pin & PINS_MASK;
     uint8_t pin_n = 0;

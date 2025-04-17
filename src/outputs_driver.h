@@ -8,9 +8,9 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <stdlib.h>
-#include "hal/gpio/gpio.h"
-#include "hal/systimer/systimer.h"
-#include "int_adc_driver.h"
+#include "hal/gpio.h"
+#include "hal/systimer.h"
+#include "hal/int_adc_driver.h"
 #include "error_handling.h"
 
 

@@ -8,9 +8,9 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <stdlib.h>
-#include "hal/gpio/gpio.h"
-#include "hal/sysclk/sysclk.h"
-#include "hal/systimer/systimer.h"
+#include "hal/gpio.h"
+#include "hal/sysclk.h"
+#include "hal/systimer.h"
 
 
 extern void indicators_init(void);

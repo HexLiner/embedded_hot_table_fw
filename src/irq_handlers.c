@@ -2,9 +2,9 @@
 /// @file    irq_handlers.c
 //  ***************************************************************************
 #include "irq_handlers.h"
-#include "hal/systimer/systimer.h"
+#include "hal/systimer.h"
 #include "mcu_clock.h"
-#include "int_adc_driver.h"
+#include "hal/int_adc_driver.h"
 #include "usb_cdc.h"
 #include "indicators_driver.h"
 

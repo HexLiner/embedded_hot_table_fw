@@ -2,8 +2,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
-#include "ssd1306.h"
-#include "hal/i2c/i2c_driver.h"
+#include "dev/ssd1306.h"
+#include "hal/i2c_driver.h"
+#include "lib_config.h"
 
 
 #define SSD1306_CONTRAST             (0x81)
@@ -105,7 +106,7 @@ static const uint8_t fount[][5] = {
     {0x08, 0x04, 0x02, 0x04, 0x08},    // ^
     {0x80, 0x80, 0x80, 0x80, 0x80},    // _
     {0x00, 0x06, 0x0E, 0x00, 0x00},    // `
-#if (SSD1306_USE_SMALL_REGISTER != 0)
+#if (SSD1306_USE_SMALL_REGISTER)
     {0x40, 0xA8, 0xA8, 0xA8, 0xF0},    // a
     {0xFE, 0x88, 0x88, 0x88, 0x70},
     {0x70, 0x88, 0x88, 0x88, 0x00},
@@ -148,7 +149,7 @@ static i2c_t *i2c_int;
 
 static void ssd1306_send_cmd(uint8_t command);
 static void ssd1306_i2c_write_blocking(const uint8_t *data, uint8_t data_size);
-static void dig_to_string(uint16_t digit, bool is_visible_zeros, char *string);
+static void dig_to_string(uint16_t digit, bool is_visible_zeros, uint8_t *string);
 
 
 
@@ -280,7 +281,7 @@ void ssd1306_set_img(uint8_t *data, uint8_t x, uint8_t y, uint8_t w, uint8_t h) 
 
 
 void ssd1306_print_digit(uint16_t digit, uint8_t digit_max_len, bool is_visible_zeros, ssd1306_fount_mode_t ssd1306_fount_mode, uint8_t x, uint8_t y) {
-    char lcd_string[6];
+    uint8_t lcd_string[6];
 
 
     dig_to_string(digit, is_visible_zeros, lcd_string);
@@ -290,7 +291,7 @@ void ssd1306_print_digit(uint16_t digit, uint8_t digit_max_len, bool is_visible_
 
 // k = 1 -> 21 x 4 simw  (0, 6, 12, 18, 24, 30, 36, 42, 48, 54, 60, 66, 72, 78, 84, 90, 96, 102, 108, 114, 120)
 // k = 2 -> 10 x 2 simw  (0, 12, 24, 36, 48, 60, 72, 84, 96, 108)
-void ssd1306_print_str(const char *str, uint8_t min_str_size, ssd1306_fount_mode_t ssd1306_fount_mode, uint8_t x, uint8_t y) {
+void ssd1306_print_str(const uint8_t *str, uint8_t min_str_size, ssd1306_fount_mode_t ssd1306_fount_mode, uint8_t x, uint8_t y) {
     uint8_t curr_x;
     uint8_t simw_qty;
 
@@ -310,7 +311,7 @@ void ssd1306_print_str(const char *str, uint8_t min_str_size, ssd1306_fount_mode
 }
 
 
-void ssd1306_print_simw(char simw, ssd1306_fount_mode_t ssd1306_fount_mode, uint8_t x, uint8_t y) {
+void ssd1306_print_simw(uint8_t simw, ssd1306_fount_mode_t ssd1306_fount_mode, uint8_t x, uint8_t y) {
     uint8_t simw_w, simw_h;
     uint8_t simw_data[20];
     uint8_t fount_data;
@@ -383,7 +384,7 @@ static void ssd1306_i2c_write_blocking(const uint8_t *data, uint8_t data_size) {
 }
 
 
-static void dig_to_string(uint16_t digit, bool is_visible_zeros, char *string) {
+static void dig_to_string(uint16_t digit, bool is_visible_zeros, uint8_t *string) {
     uint16_t tmp;
     uint8_t zero_symb;
 

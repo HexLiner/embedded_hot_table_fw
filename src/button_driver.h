@@ -9,9 +9,9 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include "common/error.h"
-#include "hal/gpio/gpio.h"
-#include "hal/sysclk/sysclk.h"
-#include "hal/systimer/systimer.h"
+#include "hal/gpio.h"
+#include "hal/sysclk.h"
+#include "hal/systimer.h"
 
 
 #define BUTTON_MAX_QTY (2)

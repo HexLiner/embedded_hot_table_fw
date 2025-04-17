@@ -10,8 +10,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include "common/error.h"
-#include "hal/gpio/gpio.h"
-#include "hal/systimer/systimer.h"
+#include "hal/gpio.h"
+#include "hal/systimer.h"
 #include "button_driver.h"
 #include "indicators_driver.h"
 #include "gui.h"

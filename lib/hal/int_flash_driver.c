@@ -1,7 +1,7 @@
 //  ***************************************************************************
 /// @file    int_flash_driver.c
 //  ***************************************************************************
-#include "int_flash_driver.h"
+#include "hal/int_flash_driver.h"
 
 
 #define WAIT_LOOP_INTERATION_COUNT (30000 * 3)   ////

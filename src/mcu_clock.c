@@ -7,8 +7,8 @@
 #include <stdint.h>
 #include "common/mcu.h"
 #include "common/error.h"
-#include "hal/sysclk/sysclk.h"
-#include "hal/systimer/systimer.h"
+#include "hal/sysclk.h"
+#include "hal/systimer.h"
 #include "error_handling.h"
 
 

@@ -1,9 +1,9 @@
 //  ***************************************************************************
 /// @file    systimer.c
 //  ***************************************************************************
-#include "hal/systimer/systimer.h"
+#include "hal/systimer.h"
 #include <stdlib.h>
-#include "hal/sysclk/sysclk.h"
+#include "hal/sysclk.h"
 #include "common/mcu.h"
 
 
@@ -15,10 +15,10 @@ static systimer_callback callback = NULL;
 
 
 //  ***************************************************************************
-/// @brief  Initialisation of System Timer
-/// @note   1ms period is set
+/// @brief  Systimer init
 /// @param  none
 /// @return none
+/// @note   1ms period is set
 //  ***************************************************************************
 void systimer_init(void) {
     uint32_t systick_freq;
@@ -32,7 +32,7 @@ void systimer_init(void) {
 
 
 //  ***************************************************************************
-/// @brief  System timer interrupt handler
+/// @brief  Systimer interrupt handler
 /// @param  none
 /// @return none
 //  ***************************************************************************
@@ -44,8 +44,8 @@ void systimer_handler(void) {
 
 //  ***************************************************************************
 /// @brief  Set callback funtcion for systimer tick
+/// @param  callback_function - pointer, can be NULL
 /// @note   Callback will be called once per systimer tick (1 kHz)
-/// @param  callback_function - callback function, can be NULL
 //  ***************************************************************************
 void systimer_set_callback(systimer_callback callback_function) {
     callback = callback_function;
@@ -54,9 +54,9 @@ void systimer_set_callback(systimer_callback callback_function) {
 
 //  ***************************************************************************
 /// @brief  Provide ms-resolution delay
-/// @note   Granularity 1 ms, accuracy 1 ms
-/// @param  ms - delay time, ms
+/// @param  ms
 /// @return none
+/// @note   Granularity 1 ms, accuracy 1 ms
 //  ***************************************************************************
 void delay_ms(uint32_t ms) {
     uint64_t start_time;
@@ -70,7 +70,7 @@ void delay_ms(uint32_t ms) {
 
 
 //  ***************************************************************************
-/// @brief  Get system timer value [ms]
+/// @brief  Get system timer value
 /// @param  none
 /// @return system timer value [ms]
 //  ***************************************************************************

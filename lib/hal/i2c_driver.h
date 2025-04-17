@@ -5,19 +5,19 @@
 #ifndef _I2C_DRIVER_H_
 #define _I2C_DRIVER_H_
 
-#include "common/lib_base.h"
 #include "common/error.h"
-#include "hal/systimer/systimer.h"
-#include "hal/gpio/gpio.h"
+#include "hal/systimer.h"
+#include "hal/gpio.h"
 
 
 typedef struct {
     // Public
-    peripheral_t peripheral;
+    void         *peripheral;   // I2C for HW driver, TIM for SW driver
     uint32_t     speed_hz;
     gpio_pin_t   scl_pin;
     gpio_pin_t   sda_pin;
     // Private
+    uint32_t     int_stack[8];
 } i2c_t;
 
 typedef struct {

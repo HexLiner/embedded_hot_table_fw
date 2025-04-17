@@ -25,7 +25,8 @@
         "lib_base.h": "c",
         "button_driver.h": "c",
         "error_handling.h": "c",
-        "irq_handlers.h": "c"
+        "irq_handlers.h": "c",
+        "ssd1306.h": "c"
     },
     "C_Cpp.dimInactiveRegions": false
 }

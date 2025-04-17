@@ -1,11 +1,11 @@
-#include "cli.h"
+#include "common/cli.h"
 #include <stdint.h>
 #include <stdbool.h>
 #include <string.h>
 #include "common/error.h"
-#include "hal/systimer/systimer.h"
+#include "hal/systimer.h"
 #include "ring_buff.h"
-#include "parsers.h"
+#include "common/parsers.h"
 
 
 #define CLI_CMD_INACTIVE_INDEX (-1)
@@ -104,13 +104,13 @@ error_t cli_safe_print(const uint8_t *str) {
 /// @return @ref error_t
 /// @note   Variadic function
 //  ***************************************************************************
-error_t cli_printf(const char *format, ...) {
+error_t cli_printf(const uint8_t *format, ...) {
     va_list va;
-    char printf_buff[CLI_PRINTF_BUFF_SIZE];
+    uint8_t printf_buff[CLI_PRINTF_BUFF_SIZE];
 
 
     va_start(va, format);
-    vsnprintf(printf_buff, CLI_PRINTF_BUFF_SIZE, format, va);
+    vsnprintf((char*)printf_buff, CLI_PRINTF_BUFF_SIZE, (char*)format, va);
     va_end(va);
 
     return cli_print(printf_buff);
@@ -123,13 +123,13 @@ error_t cli_printf(const char *format, ...) {
 /// @return @ref error_t
 /// @note   Variadic function
 //  ***************************************************************************
-error_t cli_safe_printf(const char *format, ...) {
+error_t cli_safe_printf(const uint8_t *format, ...) {
     va_list va;
-    char printf_buff[CLI_PRINTF_BUFF_SIZE];
+    uint8_t printf_buff[CLI_PRINTF_BUFF_SIZE];
 
 
     va_start(va, format);
-    vsnprintf(printf_buff, CLI_PRINTF_BUFF_SIZE, format, va);
+    vsnprintf((char*)printf_buff, CLI_PRINTF_BUFF_SIZE, (char*)format, va);
     va_end(va);
 
     return cli_safe_print(printf_buff);

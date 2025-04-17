@@ -10,11 +10,10 @@
 #include <stdbool.h>
 #include "common/mcu.h"
 #include "common/error.h"
-#include "hal/sysclk/sysclk.h"
-#include "hal/systimer/systimer.h"
+#include "hal/sysclk.h"
+#include "hal/systimer.h"
+#include "lib_config.h"
 
-
-#define INT_ADC_MAX_CHANNELS_QTY    (3)
 
 #define INT_ADC_TEMPERATURE_CHANNEL (16)
 #define INT_ADC_VREFINT_CHANNEL     (17)

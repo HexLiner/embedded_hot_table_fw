@@ -12,7 +12,9 @@ static void single_button_process(button_t *button);
 
 
 void button_init(button_t *button) {
-    if (buttons_qty >= BUTTON_MAX_QTY) ERROR_FATAL(button_init, __LINE__);
+    #ifdef LIB_DEBUG_EH
+    if (buttons_qty >= BUTTON_MAX_QTY) error_fatal((uintptr_t)button_init, __LINE__);
+    #endif   // LIB_DEBUG_EH
 
     buttons[buttons_qty] = button;
     gpio_config_pins(buttons[buttons_qty]->button_pin, GPIO_MODE_INPUT, GPIO_PULL_NONE, GPIO_SPEED_LOW, 0, false);

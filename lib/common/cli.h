@@ -10,14 +10,7 @@
 #include <stdio.h>
 #include <stdarg.h>
 #include "common/error.h"
-
-
-#define CLI_CMD_MAX_ARG_QTY   (10)
-#define CLI_TX_BUFF_SIZE      (100)
-#define CLI_RX_BUFF_SIZE      (100)
-#define CLI_RX_RAW_BUFF_SIZE  (100)
-#define CLI_PRINTF_BUFF_SIZE  (100)
-#define CLI_PROMPT            ("> ")
+#include "lib_config.h"
 
 
 typedef enum {
@@ -46,8 +39,8 @@ extern void cli_process(void);
 extern error_t cli_print(const uint8_t *str);
 extern error_t cli_safe_print(const uint8_t *str);
 
-extern error_t cli_printf(const char *format, ...);
-extern error_t cli_safe_printf(const char *format, ...);
+extern error_t cli_printf(const uint8_t *format, ...);
+extern error_t cli_safe_printf(const uint8_t *format, ...);
 
 
 #endif  // _CLI_H_

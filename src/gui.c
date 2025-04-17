@@ -9,7 +9,7 @@
 #define DISPLAY_STANDBY_TIMEOUT_MS (60 * 1000)
 
 static i2c_t i2c = {
-    .peripheral = NULL,
+    .peripheral = TIM17,
     .speed_hz  = 1000000,
     .scl_pin   = PA1,
     .sda_pin   = PA0

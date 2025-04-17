@@ -7,8 +7,8 @@
 
 #include <stdint.h>
 #include <stdbool.h>
-#include "int_flash_driver.h"
-#include "crc_calc.h"
+#include "hal/int_flash_driver.h"
+#include "common/crc_calc.h"
 #include "error_handling.h"
 
 

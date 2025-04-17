@@ -5739,59 +5739,89 @@
         <group>
             <name>common</name>
             <file>
+                <name>$PROJ_DIR$\lib\common\cli.c</name>
+            </file>
+            <file>
+                <name>$PROJ_DIR$\lib\common\cli.h</name>
+            </file>
+            <file>
+                <name>$PROJ_DIR$\lib\common\crc_calc.c</name>
+            </file>
+            <file>
+                <name>$PROJ_DIR$\lib\common\crc_calc.h</name>
+            </file>
+            <file>
                 <name>$PROJ_DIR$\lib\common\error.c</name>
             </file>
             <file>
                 <name>$PROJ_DIR$\lib\common\error.h</name>
             </file>
             <file>
-                <name>$PROJ_DIR$\lib\common\lib_base.h</name>
+                <name>$PROJ_DIR$\lib\common\mcu.h</name>
             </file>
             <file>
-                <name>$PROJ_DIR$\lib\common\mcu.h</name>
+                <name>$PROJ_DIR$\lib\common\parsers.c</name>
+            </file>
+            <file>
+                <name>$PROJ_DIR$\lib\common\parsers.h</name>
+            </file>
+            <file>
+                <name>$PROJ_DIR$\lib\common\ring_buff.c</name>
+            </file>
+            <file>
+                <name>$PROJ_DIR$\lib\common\ring_buff.h</name>
+            </file>
+        </group>
+        <group>
+            <name>dev</name>
+            <file>
+                <name>$PROJ_DIR$\lib\dev\ssd1306.c</name>
+            </file>
+            <file>
+                <name>$PROJ_DIR$\lib\dev\ssd1306.h</name>
             </file>
         </group>
         <group>
             <name>hal</name>
-            <group>
-                <name>gpio</name>
-                <file>
-                    <name>$PROJ_DIR$\lib\hal\gpio\gpio.c</name>
-                </file>
-                <file>
-                    <name>$PROJ_DIR$\lib\hal\gpio\gpio.h</name>
-                </file>
-            </group>
-            <group>
-                <name>i2c</name>
-                <file>
-                    <name>$PROJ_DIR$\lib\hal\i2c\i2c_driver.h</name>
-                </file>
-                <file>
-                    <name>$PROJ_DIR$\lib\hal\i2c\i2c_driver_soft.c</name>
-                </file>
-            </group>
-            <group>
-                <name>sysclk</name>
-                <file>
-                    <name>$PROJ_DIR$\lib\hal\sysclk\sysclk.h</name>
-                </file>
-                <file>
-                    <name>$PROJ_DIR$\lib\hal\sysclk\sysclk_stm32f070f6.c</name>
-                </file>
-                <file>
-                    <name>$PROJ_DIR$\lib\hal\sysclk\sysclk_stm32f070f6.h</name>
-                </file>
-            </group>
-            <group>
-                <name>systimer</name>
-                <file>
-                    <name>$PROJ_DIR$\lib\hal\systimer\systimer.c</name>
-                </file>
-                <file>
-                    <name>$PROJ_DIR$\lib\hal\systimer\systimer.h</name>
-                </file>
-            </group>
+            <file>
+                <name>$PROJ_DIR$\lib\hal\gpio.h</name>
+            </file>
+            <file>
+                <name>$PROJ_DIR$\lib\hal\gpio_p0.c</name>
+            </file>
+            <file>
+                <name>$PROJ_DIR$\lib\hal\i2c_driver.h</name>
+            </file>
+            <file>
+                <name>$PROJ_DIR$\lib\hal\i2c_driver_soft.c</name>
+            </file>
+            <file>
+                <name>$PROJ_DIR$\lib\hal\int_adc_driver.c</name>
+            </file>
+            <file>
+                <name>$PROJ_DIR$\lib\hal\int_adc_driver.h</name>
+            </file>
+            <file>
+                <name>$PROJ_DIR$\lib\hal\int_flash_driver.c</name>
+            </file>
+            <file>
+                <name>$PROJ_DIR$\lib\hal\int_flash_driver.h</name>
+            </file>
+            <file>
+                <name>$PROJ_DIR$\lib\hal\sysclk.h</name>
+            </file>
+            <file>
+                <name>$PROJ_DIR$\lib\hal\sysclk_stm32f070f6.c</name>
+            </file>
+            <file>
+                <name>$PROJ_DIR$\lib\hal\sysclk_stm32f070f6.h</name>
+            </file>
+            <file>
+                <name>$PROJ_DIR$\lib\hal\systimer.c</name>
+            </file>
+            <file>
+                <name>$PROJ_DIR$\lib\hal\systimer.h</name>
+            </file>
         </group>
         <group>
             <name>startup</name>
@@ -5809,22 +5839,10 @@
             <name>$PROJ_DIR$\src\button_driver.h</name>
         </file>
         <file>
-            <name>$PROJ_DIR$\src\cli.c</name>
-        </file>
-        <file>
-            <name>$PROJ_DIR$\src\cli.h</name>
-        </file>
-        <file>
             <name>$PROJ_DIR$\src\cli_cmd.c</name>
         </file>
         <file>
             <name>$PROJ_DIR$\src\cli_cmd.h</name>
-        </file>
-        <file>
-            <name>$PROJ_DIR$\src\crc_calc.c</name>
-        </file>
-        <file>
-            <name>$PROJ_DIR$\src\crc_calc.h</name>
         </file>
         <file>
             <name>$PROJ_DIR$\src\error_handling.c</name>
@@ -5851,18 +5869,6 @@
             <name>$PROJ_DIR$\src\indicators_driver.h</name>
         </file>
         <file>
-            <name>$PROJ_DIR$\src\int_adc_driver.c</name>
-        </file>
-        <file>
-            <name>$PROJ_DIR$\src\int_adc_driver.h</name>
-        </file>
-        <file>
-            <name>$PROJ_DIR$\src\int_flash_driver.c</name>
-        </file>
-        <file>
-            <name>$PROJ_DIR$\src\int_flash_driver.h</name>
-        </file>
-        <file>
             <name>$PROJ_DIR$\src\irq_handlers.c</name>
         </file>
         <file>
@@ -5884,12 +5890,6 @@
             <name>$PROJ_DIR$\src\outputs_driver.h</name>
         </file>
         <file>
-            <name>$PROJ_DIR$\src\parsers.c</name>
-        </file>
-        <file>
-            <name>$PROJ_DIR$\src\parsers.h</name>
-        </file>
-        <file>
             <name>$PROJ_DIR$\src\profiles.c</name>
         </file>
         <file>
@@ -5900,18 +5900,6 @@
         </file>
         <file>
             <name>$PROJ_DIR$\src\registers.h</name>
-        </file>
-        <file>
-            <name>$PROJ_DIR$\src\ring_buff.c</name>
-        </file>
-        <file>
-            <name>$PROJ_DIR$\src\ring_buff.h</name>
-        </file>
-        <file>
-            <name>$PROJ_DIR$\src\ssd1306.c</name>
-        </file>
-        <file>
-            <name>$PROJ_DIR$\src\ssd1306.h</name>
         </file>
         <file>
             <name>$PROJ_DIR$\src\system_operation.c</name>

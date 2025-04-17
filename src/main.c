@@ -2,13 +2,13 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include "common/error.h"
-#include "hal/gpio/gpio.h"
-#include "hal/sysclk/sysclk.h"
-#include "hal/systimer/systimer.h"
+#include "hal/gpio.h"
+#include "hal/sysclk.h"
+#include "hal/systimer.h"
 #include "irq_handlers.h"
 #include "mcu_clock.h"
 #include "profiles.h"
-#include "cli.h"
+#include "common/cli.h"
 #include "cli_cmd.h"
 #include "system_operation.h"
 #include "error_handling.h"

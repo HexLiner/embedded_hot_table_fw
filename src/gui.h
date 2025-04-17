@@ -9,11 +9,11 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
-#include "hal/gpio/gpio.h"
-#include "hal/sysclk/sysclk.h"
-#include "hal/systimer/systimer.h"
-#include "hal/i2c/i2c_driver.h"
-#include "ssd1306.h"
+#include "hal/gpio.h"
+#include "hal/sysclk.h"
+#include "hal/systimer.h"
+#include "hal/i2c_driver.h"
+#include "dev/ssd1306.h"
 #include "registers.h"
 #include "profiles.h"
 

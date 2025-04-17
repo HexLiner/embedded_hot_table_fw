@@ -1,11 +1,10 @@
 //  ***************************************************************************
 /// @file    sysclk_stm32f070f6.c
 //  ***************************************************************************
-#include "hal/sysclk/sysclk.h"
+#include "hal/sysclk.h"
 #include <stdint.h>
 #include <stdbool.h>
 #include "common/mcu.h"
-#include "common/lib_base.h"
 #include "common/error.h"
 
 
@@ -16,15 +15,10 @@
 #define LSE_MAX_FREQ_HZ (32  * 1000)
 
 
-typedef struct {
-    const sysclk_extcfg_t *extcfg;
-} sysclk_internal_t;
+static const sysclk_extcfg_t *ext_cfg_int;
 
 
-static sysclk_internal_t sysclk_internal;
-
-
-static void sysclk_get_peripheral_enr(const peripheral_t peripheral, volatile uint32_t **reg, uint32_t *pos);
+static void sysclk_get_peripheral_enr(const void *peripheral, volatile uint32_t **reg, uint32_t *pos);
 static uint32_t sysclk_get_common_bus_freq(sysclk_bus_t bus);
 static uint32_t sysclk_get_sysclk_bus_freq(sysclk_bus_t bus);
 static uint32_t sysclk_get_pll_bus_freq(sysclk_bus_t bus);
@@ -38,57 +32,20 @@ static uint32_t sysclk_get_pll_bus_freq(sysclk_bus_t bus);
 /// @return     none
 //  ***************************************************************************
 void sysclk_init(const sysclk_extcfg_t *ext_cfg) {
-    sysclk_internal.extcfg = ext_cfg;
+    ext_cfg_int = ext_cfg;
 
+    #ifdef LIB_DEBUG_EH
     // Check HSE valid (or disabled)
-    if (sysclk_internal.extcfg->hse_freq_hz != 0) {
-        if (sysclk_internal.extcfg->hse_freq_hz < HSE_MIN_FREQ_HZ) ERROR_FATAL(sysclk_init, __LINE__);
-        if (sysclk_internal.extcfg->hse_freq_hz > HSE_MAX_FREQ_HZ) ERROR_FATAL(sysclk_init, __LINE__);
+    if (ext_cfg_int->hse_freq_hz != 0) {
+        if (ext_cfg_int->hse_freq_hz < HSE_MIN_FREQ_HZ) error_fatal((uintptr_t)sysclk_init, __LINE__);
+        if (ext_cfg_int->hse_freq_hz > HSE_MAX_FREQ_HZ) error_fatal((uintptr_t)sysclk_init, __LINE__);
     }
     // Check LSE valid (or disabled)
-    if (sysclk_internal.extcfg->lse_freq_hz != 0) {
-        if (sysclk_internal.extcfg->lse_freq_hz < LSE_MIN_FREQ_HZ) ERROR_FATAL(sysclk_init, __LINE__);
-        if (sysclk_internal.extcfg->lse_freq_hz > LSE_MAX_FREQ_HZ) ERROR_FATAL(sysclk_init, __LINE__);
+    if (ext_cfg_int->lse_freq_hz != 0) {
+        if (ext_cfg_int->lse_freq_hz < LSE_MIN_FREQ_HZ) error_fatal((uintptr_t)sysclk_init, __LINE__);
+        if (ext_cfg_int->lse_freq_hz > LSE_MAX_FREQ_HZ) error_fatal((uintptr_t)sysclk_init, __LINE__);
     }
-}
-
-
-static void sysclk_get_peripheral_enr(const peripheral_t peripheral, volatile uint32_t **reg, uint32_t *pos) {
-    *pos = UINT32_MAX;
-
-    *reg = &(RCC->AHBENR);
-    switch ((uintptr_t)peripheral) {
-        case (uintptr_t)GPIOF:         *pos = RCC_AHBENR_GPIOFEN;  return;
-        case (uintptr_t)GPIOD:         *pos = RCC_AHBENR_GPIODEN;  return;
-        case (uintptr_t)GPIOC:         *pos = RCC_AHBENR_GPIOCEN;  return;
-        case (uintptr_t)GPIOB:         *pos = RCC_AHBENR_GPIOBEN;  return;
-        case (uintptr_t)GPIOA:         *pos = RCC_AHBENR_GPIOAEN;  return;
-        case (uintptr_t)CRC:           *pos = RCC_AHBENR_CRCEN;    return;
-        case (uintptr_t)DMA1:          *pos = RCC_AHBENR_DMAEN;    return;
-    }
-
-    *reg = &(RCC->APB2ENR);
-    switch ((uintptr_t)peripheral) {
-        case (uintptr_t)SYSCFG:        *pos = RCC_APB2ENR_SYSCFGEN;  return;
-        case (uintptr_t)ADC1:          *pos = RCC_APB2ENR_ADCEN;     return;
-        case (uintptr_t)TIM1:          *pos = RCC_APB2ENR_TIM1EN;    return;
-        case (uintptr_t)SPI1:          *pos = RCC_APB2ENR_SPI1EN;    return;
-        case (uintptr_t)USART1:        *pos = RCC_APB2ENR_USART1EN;  return;
-        case (uintptr_t)TIM16:         *pos = RCC_APB2ENR_TIM16EN;   return;
-        case (uintptr_t)TIM17:         *pos = RCC_APB2ENR_TIM17EN;   return;
-    }
-
-    *reg = &(RCC->APB1ENR);
-    switch ((uintptr_t)peripheral) {
-        case (uintptr_t)TIM3:          *pos = RCC_APB1ENR_TIM3EN;    return;
-        case (uintptr_t)TIM14:         *pos = RCC_APB1ENR_TIM14EN;   return;
-        case (uintptr_t)USART2:        *pos = RCC_APB1ENR_USART2EN;  return;
-        case (uintptr_t)I2C1:          *pos = RCC_APB1ENR_I2C1EN;    return;
-        case (uintptr_t)USB:           *pos = RCC_APB1ENR_USBEN;     return;
-        case (uintptr_t)PWR:           *pos = RCC_APB1ENR_PWREN;     return;
-    }
-
-    ////if (*pos == UINT32_MAX) err
+    #endif   // LIB_DEBUG_EH
 }
 
 
@@ -97,7 +54,7 @@ static void sysclk_get_peripheral_enr(const peripheral_t peripheral, volatile ui
 /// @param      peripheral
 /// @return     none
 //  ***************************************************************************
-void sysclk_enable_peripheral(const peripheral_t peripheral) {
+void sysclk_enable_peripheral(const void *peripheral) {
     volatile uint32_t *reg;
     uint32_t msk;
     sysclk_get_peripheral_enr(peripheral, &reg, &msk);
@@ -110,7 +67,7 @@ void sysclk_enable_peripheral(const peripheral_t peripheral) {
 /// @param      peripheral
 /// @return     none
 //  ***************************************************************************
-void sysclk_disable_peripheral(const peripheral_t peripheral) {
+void sysclk_disable_peripheral(const void *peripheral) {
     volatile uint32_t *reg;
     uint32_t msk;
     sysclk_get_peripheral_enr(peripheral, &reg, &msk);
@@ -146,7 +103,7 @@ void sysclk_get_bus_freq(sysclk_bus_t bus, uint32_t *freq) {
 /// @retval     freq - peripheral frequency in Hz
 /// @return     none
 //  ***************************************************************************
-void sysclk_get_peripheral_freq(const peripheral_t peripheral, uint32_t *freq) {
+void sysclk_get_peripheral_freq(const void *peripheral, uint32_t *freq) {
     uint32_t peripheral_src;
     uint32_t peripheral_freq;
     bool     is_ahb_peripheral;
@@ -229,6 +186,50 @@ void sysclk_get_peripheral_freq(const peripheral_t peripheral, uint32_t *freq) {
 
 
 
+static void sysclk_get_peripheral_enr(const void *peripheral, volatile uint32_t **reg, uint32_t *pos) {
+    *pos = UINT32_MAX;
+
+    *reg = &(RCC->AHBENR);
+    switch ((uintptr_t)peripheral) {
+        case (uintptr_t)GPIOF:         *pos = RCC_AHBENR_GPIOFEN;  return;
+        case (uintptr_t)GPIOD:         *pos = RCC_AHBENR_GPIODEN;  return;
+        case (uintptr_t)GPIOC:         *pos = RCC_AHBENR_GPIOCEN;  return;
+        case (uintptr_t)GPIOB:         *pos = RCC_AHBENR_GPIOBEN;  return;
+        case (uintptr_t)GPIOA:         *pos = RCC_AHBENR_GPIOAEN;  return;
+        case (uintptr_t)CRC:           *pos = RCC_AHBENR_CRCEN;    return;
+        case (uintptr_t)DMA1:          *pos = RCC_AHBENR_DMAEN;    return;
+    }
+
+    *reg = &(RCC->APB2ENR);
+    switch ((uintptr_t)peripheral) {
+        case (uintptr_t)SYSCFG:        *pos = RCC_APB2ENR_SYSCFGEN;  return;
+        case (uintptr_t)ADC1:          *pos = RCC_APB2ENR_ADCEN;     return;
+        case (uintptr_t)TIM1:          *pos = RCC_APB2ENR_TIM1EN;    return;
+        case (uintptr_t)SPI1:          *pos = RCC_APB2ENR_SPI1EN;    return;
+        case (uintptr_t)USART1:        *pos = RCC_APB2ENR_USART1EN;  return;
+        case (uintptr_t)TIM16:         *pos = RCC_APB2ENR_TIM16EN;   return;
+        case (uintptr_t)TIM17:         *pos = RCC_APB2ENR_TIM17EN;   return;
+    }
+
+    *reg = &(RCC->APB1ENR);
+    switch ((uintptr_t)peripheral) {
+        case (uintptr_t)TIM3:          *pos = RCC_APB1ENR_TIM3EN;    return;
+        case (uintptr_t)TIM14:         *pos = RCC_APB1ENR_TIM14EN;   return;
+        case (uintptr_t)USART2:        *pos = RCC_APB1ENR_USART2EN;  return;
+        case (uintptr_t)I2C1:          *pos = RCC_APB1ENR_I2C1EN;    return;
+        case (uintptr_t)USB:           *pos = RCC_APB1ENR_USBEN;     return;
+        case (uintptr_t)PWR:           *pos = RCC_APB1ENR_PWREN;     return;
+    }
+
+
+    #ifdef LIB_DEBUG_EH
+    // Check HSE valid (or disabled)
+    if (ext_cfg_int->hse_freq_hz != 0) {
+        if (*pos == UINT32_MAX) error_fatal((uintptr_t)sysclk_get_peripheral_enr, __LINE__);
+    #endif    // LIB_DEBUG_EH
+}
+
+
 //  ***************************************************************************
 /// @brief      Get common bus frequency
 /// @param      bus
@@ -260,7 +261,7 @@ static uint32_t sysclk_get_common_bus_freq(sysclk_bus_t bus) {
             bus_freq = 0;
         }
         else {
-            bus_freq = sysclk_internal.extcfg->hse_freq_hz;
+            bus_freq = ext_cfg_int->hse_freq_hz;
         }
     }
     else if (bus == SYSCLK_LSE) {
@@ -268,7 +269,7 @@ static uint32_t sysclk_get_common_bus_freq(sysclk_bus_t bus) {
             bus_freq = 0;
         }
         else {
-            bus_freq = sysclk_internal.extcfg->lse_freq_hz;
+            bus_freq = ext_cfg_int->lse_freq_hz;
         }
     }
 

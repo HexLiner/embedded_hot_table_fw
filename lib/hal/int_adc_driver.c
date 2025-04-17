@@ -1,7 +1,7 @@
 //  ***************************************************************************
 /// @file    int_adc_driver.c
 //  ***************************************************************************
-#include "int_adc_driver.h"
+#include "hal/int_adc_driver.h"
 
 
 #define ADC_TIMEOUT_MS (20)
@@ -77,9 +77,11 @@ void int_adc_handler(void) {
 void int_adc_add_channel(int_adc_channel_t *int_adc_channel) {
     int32_t i;
 
-    
-    if ((ADC1->CR & ADC_CR_ADSTART) != 0) ERROR_FATAL(int_adc_add_channel, __LINE__);   // ADC must be stopped!
-    if (active_channels[INT_ADC_MAX_CHANNELS_QTY - 1] != NULL) ERROR_FATAL(int_adc_add_channel, __LINE__);
+
+    #ifdef LIB_DEBUG_EH
+    if ((ADC1->CR & ADC_CR_ADSTART) != 0) error_fatal((uintptr_t)int_adc_add_channel, __LINE__);   // ADC must be stopped!
+    if (active_channels[INT_ADC_MAX_CHANNELS_QTY - 1] != NULL) error_fatal((uintptr_t)int_adc_add_channel, __LINE__);
+    #endif   // LIB_DEBUG_EH
 
     // sort from min to max
     for (i = (INT_ADC_MAX_CHANNELS_QTY - 1); i >= 0; i--) {

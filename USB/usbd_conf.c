@@ -22,8 +22,8 @@
 #include "stm32f0xx_hal_pcd_ex.h"
 #include "usbd_core.h"
 #include "usbd_cdc.h"
-#include "hal/gpio/gpio.h"
-#include "hal/sysclk/sysclk.h"
+#include "hal/gpio.h"
+#include "hal/sysclk.h"
 /* Private typedef -----------------------------------------------------------*/
 /* Private define ------------------------------------------------------------*/
 /* Private macro -------------------------------------------------------------*/
